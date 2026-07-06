@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum HabitSlug {
+  morning_azkar
+  evening_azkar
+  dua
+  quran
+  exercise
+  islamic_learning
+}
+
+enum HabitStatus {
+  completed
+  skipped
+  pending
+}
+
+enum ReminderType {
+  fajr
+  maghrib
+  custom
+}
+
+model User {
+  id             String         @id @default(uuid())
+  email          String         @unique
+  passwordHash   String
+  name           String
+  avatar         String?
+  theme          String         @default("dark")
+  timezone       String         @default("UTC")
+  refreshToken   String?
+  resetToken     String?
+  resetTokenExp  DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  habitRecords   HabitRecord[]
+  streaks        Streak[]
+  achievements   UserAchievement[]
+  reminders      Reminder[]
+  settings       Setting?
+}
+
+model Habit {
+  id          String      @id @default(uuid())
+  slug        HabitSlug   @unique
+  label       String
+  icon        String
+  description String
+  targetMinutes Int?
+  sortOrder   Int
+  createdAt   DateTime    @default(now())
+
+  records     HabitRecord[]
+  reminders   Reminder[]
+}
+
+model HabitRecord {
+  id              String      @id @default(uuid())
+  userId          String
+  habitId         String
+  date            DateTime
+  status          HabitStatus @default(pending)
+  completedAt     DateTime?
+  notes           String?
+  skipReason      String?
+  durationMinutes Int?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, habitId, date])
+  @@index([userId, date])
+  @@index([habitId])
+}
+
+model Streak {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  currentStreak   Int      @default(0)
+  longestStreak   Int      @default(0)
+  lastActivityDate DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Achievement {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  title       String
+  description String
+  icon        String
+  targetValue Int
+  createdAt   DateTime @default(now())
+
+  users UserAchievement[]
+}
+
+model UserAchievement {
+  id            String   @id @default(uuid())
+  userId        String
+  achievementId String
+  progress      Int      @default(0)
+  unlockedAt    DateTime?
+  createdAt     DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+}
+
+model Reminder {
+  id        String       @id @default(uuid())
+  userId    String
+  habitId   String
+  enabled   Boolean      @default(true)
+  time      String
+  type      ReminderType
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Setting {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  reminderEnabled Boolean @default(true)
+  duaReminder   Boolean  @default(true)
+  quranReminder Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
