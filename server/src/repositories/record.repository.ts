@@ -26,17 +26,13 @@ export const recordRepository = {
     });
   },
 
-  async upsert(userId: string, habitId: string, date: Date, data: Prisma.HabitRecordCreateInput) {
+  async upsert(userId: string, habitId: string, date: Date, data: Prisma.HabitRecordUncheckedCreateInput) {
     return prisma.habitRecord.upsert({
       where: {
         userId_habitId_date: { userId, habitId, date },
       },
-      create: {
-        ...data,
-        user: { connect: { id: userId } },
-        habit: { connect: { id: habitId } },
-      } as Prisma.HabitRecordCreateInput,
-      update: data as Prisma.HabitRecordUpdateInput,
+      create: data,
+      update: data,
       include: { habit: true },
     });
   },
