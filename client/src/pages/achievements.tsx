@@ -18,14 +18,8 @@ export default function AchievementsPage() {
   const { data: achievements, isLoading } = useQuery({
     queryKey: ['achievements'],
     queryFn: async () => {
-      const { data } = await api.get('/records/analytics/' + new Date().getFullYear() + '/' + (new Date().getMonth() + 1));
-      return [
-        { slug: '7_day_streak', title: '7-Day Streak', description: 'Complete all habits for 7 consecutive days', icon: 'badge', targetValue: 7, progress: Math.min(data.data.streaks.currentStreak, 7), unlockedAt: data.data.streaks.currentStreak >= 7 ? new Date().toISOString() : null },
-        { slug: '30_day_streak', title: '30-Day Streak', description: 'Complete all habits for 30 consecutive days', icon: 'star', targetValue: 30, progress: Math.min(data.data.streaks.currentStreak, 30), unlockedAt: null },
-        { slug: '100_day_streak', title: '100-Day Streak', description: 'Complete all habits for 100 consecutive days', icon: 'trophy', targetValue: 100, progress: Math.min(data.data.streaks.currentStreak, 100), unlockedAt: null },
-        { slug: 'perfect_week', title: 'Perfect Week', description: 'Complete all habits for an entire week', icon: 'flame', targetValue: 7, progress: 0, unlockedAt: null },
-        { slug: 'perfect_month', title: 'Perfect Month', description: 'Complete all habits for an entire month', icon: 'award', targetValue: 30, progress: 0, unlockedAt: null },
-      ];
+      const { data } = await api.get('/achievements');
+      return data.data;
     },
   });
 

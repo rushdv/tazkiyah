@@ -7,7 +7,7 @@ import { generateTokenPair, verifyRefreshToken } from '../utils/jwt';
 import { AppError } from '../utils/response';
 import { DEFAULT_HABITS } from '../config/habits';
 import { prisma } from '../config/database';
-import { RegisterInput, LoginInput, ChangePasswordInput } from '@tazkiyah/shared';
+import { RegisterInput, LoginInput, ChangePasswordInput, UpdateProfileInput, UpdateSettingsInput } from '@tazkiyah/shared';
 
 const SALT_ROUNDS = 12;
 
@@ -175,8 +175,48 @@ export const authService = {
       avatar: user.avatar,
       theme: user.theme,
       timezone: user.timezone,
+      settings: user.settings,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     };
   },
+
+  async updateProfile(userId: string, input: UpdateProfileInput) {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    const updated = await userRepository.update(userId, {
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.avatar !== undefined ? { avatar: input.avatar } : {}),
+      ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
+      ...(input.theme !== undefined ? { theme: input.theme } : {}),
+    });
+
+    return {
+      id: updated.id,
+      email: updated.email,
+      name: updated.name,
+      avatar: updated.avatar,
+      theme: updated.theme,
+      timezone: updated.timezone,
+      settings: updated.settings,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+    };
+  },
+
+  async getSettings(userId: string) {
+    let settings = await userRepository.getSettings(userId);
+    if (!settings) {
+      settings = await userRepository.updateSettings(userId, {});
+    }
+    return settings;
+  },
+
+  async updateSettings(userId: string, input: UpdateSettingsInput) {
+    return userRepository.updateSettings(userId, input);
+  },
 };
+

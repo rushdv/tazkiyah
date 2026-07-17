@@ -75,4 +75,32 @@ export const authController = {
       next(error);
     }
   },
+
+  async updateProfile(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const user = await authService.updateProfile(req.userId!, req.body);
+      sendSuccess(res, { data: user, message: 'Profile updated successfully' });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getSettings(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const settings = await authService.getSettings(req.userId!);
+      sendSuccess(res, { data: settings });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async updateSettings(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const settings = await authService.updateSettings(req.userId!, req.body);
+      sendSuccess(res, { data: settings, message: 'Settings updated successfully' });
+    } catch (error) {
+      next(error);
+    }
+  },
 };
+

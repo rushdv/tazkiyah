@@ -29,6 +29,7 @@ export const userRepository = {
     return prisma.user.update({
       where: { id },
       data,
+      include: { settings: true },
     });
   },
 
@@ -68,4 +69,22 @@ export const userRepository = {
       data: { resetToken: null, resetTokenExp: null },
     });
   },
+
+  async getSettings(userId: string) {
+    return prisma.setting.findUnique({
+      where: { userId },
+    });
+  },
+
+  async updateSettings(userId: string, data: { reminderEnabled?: boolean; duaReminder?: boolean; quranReminder?: boolean }) {
+    return prisma.setting.upsert({
+      where: { userId },
+      create: {
+        userId,
+        ...data,
+      },
+      update: data,
+    });
+  },
 };
+

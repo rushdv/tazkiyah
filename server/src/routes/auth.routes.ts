@@ -9,6 +9,8 @@ import {
   changePasswordSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  updateProfileSchema,
+  updateSettingsSchema,
 } from '@tazkiyah/shared';
 
 const router = Router();
@@ -23,5 +25,9 @@ router.use(authenticate);
 router.get('/me', authController.me);
 router.post('/logout', authController.logout);
 router.post('/change-password', validate(changePasswordSchema), authController.changePassword);
+router.patch('/profile', validate(updateProfileSchema), authController.updateProfile);
+router.get('/settings', authController.getSettings);
+router.patch('/settings', validate(updateSettingsSchema), authController.updateSettings);
 
 export default router;
+

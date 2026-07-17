@@ -36,6 +36,28 @@ export default function SettingsPage() {
     },
   });
 
+  const { data: settings, isLoading: isSettingsLoading } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const res = await api.get('/auth/settings');
+      return res.data.data;
+    },
+  });
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (data: { reminderEnabled?: boolean; duaReminder?: boolean; quranReminder?: boolean }) => {
+      const res = await api.patch('/auth/settings', data);
+      return res.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      toast.success('Preferences updated');
+    },
+    onError: () => {
+      toast.error('Failed to update preferences');
+    },
+  });
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
       <div>
@@ -86,34 +108,56 @@ export default function SettingsPage() {
             <CardDescription>Customize your experience</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Email Notifications</Label>
-                <p className="text-xs text-muted-foreground">Receive weekly report via email</p>
+            {isSettingsLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
               </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Reminders</Label>
-                <p className="text-xs text-muted-foreground">Enable habit reminders</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Dua Reminder</Label>
-                <p className="text-xs text-muted-foreground">Remind me to make dua</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Quran Reminder</Label>
-                <p className="text-xs text-muted-foreground">Remind me to read Quran</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Email Notifications</Label>
+                    <p className="text-xs text-muted-foreground">Receive weekly report via email</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Reminders</Label>
+                    <p className="text-xs text-muted-foreground">Enable habit reminders</p>
+                  </div>
+                  <Switch
+                    checked={settings?.reminderEnabled ?? true}
+                    onCheckedChange={(checked) => updateSettingsMutation.mutate({ reminderEnabled: checked })}
+                    disabled={updateSettingsMutation.isPending}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Dua Reminder</Label>
+                    <p className="text-xs text-muted-foreground">Remind me to make dua</p>
+                  </div>
+                  <Switch
+                    checked={settings?.duaReminder ?? true}
+                    onCheckedChange={(checked) => updateSettingsMutation.mutate({ duaReminder: checked })}
+                    disabled={updateSettingsMutation.isPending}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Quran Reminder</Label>
+                    <p className="text-xs text-muted-foreground">Remind me to read Quran</p>
+                  </div>
+                  <Switch
+                    checked={settings?.quranReminder ?? true}
+                    onCheckedChange={(checked) => updateSettingsMutation.mutate({ quranReminder: checked })}
+                    disabled={updateSettingsMutation.isPending}
+                  />
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 

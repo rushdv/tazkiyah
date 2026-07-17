@@ -79,6 +79,13 @@ export const updateProfileSchema = z.object({
   theme: z.enum(['dark', 'light', 'system']).optional(),
 });
 
+export const updateSettingsSchema = z.object({
+  reminderEnabled: z.boolean().optional(),
+  duaReminder: z.boolean().optional(),
+  quranReminder: z.boolean().optional(),
+});
+
+
 export const habitRecordCreateSchema = z.object({
   habitId: z.string().uuid(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
@@ -118,6 +125,7 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 export type HabitRecordCreateInput = z.infer<typeof habitRecordCreateSchema>;
 export type HabitRecordUpdateInput = z.infer<typeof habitRecordUpdateSchema>;
 export type ReminderCreateInput = z.infer<typeof reminderCreateSchema>;

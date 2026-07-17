@@ -4,6 +4,7 @@ import { habitRepository } from '../repositories/habit.repository';
 import { AppError } from '../utils/response';
 import { HabitRecordCreateInput, HabitRecordUpdateInput } from '@tazkiyah/shared';
 import { getDailyMotivation, MotivationCard } from '../utils/motivation';
+import { achievementService } from './achievement.service';
 
 export const recordService = {
   async getToday(userId: string) {
@@ -55,9 +56,8 @@ export const recordService = {
       habitId: input.habitId,
     } as any);
 
-    if (input.status === 'completed') {
-      await this.updateStreaks(userId, date);
-    }
+    await this.updateStreaks(userId, date);
+    await achievementService.checkAndUnlockAchievements(userId);
 
     return record;
   },
@@ -75,7 +75,12 @@ export const recordService = {
     if (input.skipReason !== undefined) updateData.skipReason = input.skipReason;
     if (input.durationMinutes !== undefined) updateData.durationMinutes = input.durationMinutes;
 
-    return recordRepository.update(recordId, updateData as any);
+    const updated = await recordRepository.update(recordId, updateData as any);
+
+    await this.updateStreaks(userId, existing.date);
+    await achievementService.checkAndUnlockAchievements(userId);
+
+    return updated;
   },
 
   async getDayDetail(userId: string, dateStr: string) {
@@ -279,6 +284,14 @@ export const recordService = {
   },
 
   async updateStreaks(userId: string, activityDate: Date) {
+    const habits = await habitRepository.findAll();
+    const records = await recordRepository.findByUserAndDate(userId, activityDate);
+    const completedCount = records.filter((r) => r.status === 'completed').length;
+
+    if (habits.length > 0 && completedCount < habits.length) {
+      return;
+    }
+
     const streaks = await streakRepository.get(userId);
     const currentStreak = streaks?.currentStreak || 0;
     const longestStreak = streaks?.longestStreak || 0;
@@ -300,6 +313,8 @@ export const recordService = {
 
       if (diffDays === 1) {
         newCurrent = currentStreak + 1;
+      } else if (diffDays === 0) {
+        newCurrent = Math.max(1, currentStreak);
       } else if (diffDays > 1) {
         newCurrent = 1;
       }
@@ -312,3 +327,4 @@ export const recordService = {
     await streakRepository.upsert(userId, newCurrent, newLongest, activityDate);
   },
 };
+
