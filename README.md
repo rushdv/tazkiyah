@@ -26,7 +26,7 @@ Tazkiyah is a modern Islamic habit tracker that helps Muslims consistently maint
 ---
 
 ## Tech Stack
-
+ 
 ### Frontend
 - React 19, Vite, TypeScript
 - Tailwind CSS v4, shadcn/ui, Radix UI
