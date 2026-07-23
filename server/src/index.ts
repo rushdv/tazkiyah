@@ -9,6 +9,7 @@ import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import routes from './routes';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger';
+import { startCronJobs } from './services/cron.service';
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use(errorHandler);
 
 async function start() {
   await connectDatabase();
+  startCronJobs();
   
   app.listen(config.port, () => {
     console.log(`[Server] Running on port ${config.port} in ${config.env} mode`);
