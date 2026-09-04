@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "description": "Build Better Habits. Strengthen Your Deen.",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cd server && npm run dev",
