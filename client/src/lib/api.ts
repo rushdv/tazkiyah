@@ -9,8 +9,11 @@ interface FailedRequest {
 let isRefreshing = false;
 let failedQueue: FailedRequest[] = [];
 
+const rawBaseUrl = import.meta.env.VITE_API_URL || '/api/v1';
+export const API_BASE_URL = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
 });
@@ -61,7 +64,7 @@ api.interceptors.response.use(
       }
 
       try {
-        const { data } = await axios.post('/api/v1/auth/refresh', { refreshToken });
+        const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
         const newToken = data.data.tokens.accessToken;
         localStorage.setItem('accessToken', newToken);
         localStorage.setItem('refreshToken', data.data.tokens.refreshToken);
