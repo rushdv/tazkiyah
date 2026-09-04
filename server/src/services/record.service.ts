@@ -1,34 +1,77 @@
 import { recordRepository } from '../repositories/record.repository';
 import { streakRepository } from '../repositories/streak.repository';
 import { habitRepository } from '../repositories/habit.repository';
+import { reflectionRepository } from '../repositories/reflection.repository';
+import { userHabitSettingRepository } from '../repositories/userHabitSetting.repository';
 import { AppError } from '../utils/response';
 import { HabitRecordCreateInput, HabitRecordUpdateInput } from '@tazkiyah/shared';
-import { getDailyMotivation, MotivationCard } from '../utils/motivation';
+import { getDailyMotivation } from '../utils/motivation';
 import { achievementService } from './achievement.service';
 
 export const recordService = {
   async getToday(userId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const today = new Date(dateStr + 'T00:00:00Z');
 
     const habits = await habitRepository.findAll();
     const records = await recordRepository.findByUserAndDate(userId, today);
+    const userHabitSettings = await userHabitSettingRepository.findByUser(userId);
+    const reflection = await reflectionRepository.findByUserAndDate(userId, today);
 
     const recordsMap = new Map(records.map((r) => [r.habitId, r]));
+    const settingsMap = new Map(userHabitSettings.map((s) => [s.habitId, s]));
 
-    const habitsWithRecords = habits.map((habit) => ({
-      id: habit.id,
-      slug: habit.slug,
-      label: habit.label,
-      icon: habit.icon,
-      description: habit.description,
-      targetMinutes: habit.targetMinutes,
-      sortOrder: habit.sortOrder,
-      record: recordsMap.get(habit.id) || null,
-    }));
+    const habitsWithRecords = habits
+      .map((habit) => {
+        const userSetting = settingsMap.get(habit.id);
+        const record = recordsMap.get(habit.id) || null;
 
-    const completedCount = records.filter((r) => r.status === 'completed').length;
-    const completion = habits.length > 0 ? Math.round((completedCount / habits.length) * 100) : 0;
+        const enabled = userSetting ? userSetting.enabled : true;
+        const effectiveTargetMinutes = userSetting?.customTargetMinutes ?? habit.targetMinutes ?? null;
+        const effectiveTargetCount = userSetting?.customTargetCount ?? habit.targetCount ?? null;
+        const effectiveSortOrder = userSetting?.sortOrder ?? habit.sortOrder;
+
+        return {
+          id: habit.id,
+          slug: habit.slug,
+          label: habit.label,
+          icon: habit.icon,
+          description: habit.description,
+          type: habit.type as 'binary' | 'duration' | 'count' | 'custom',
+          targetMinutes: habit.targetMinutes,
+          targetCount: habit.targetCount,
+          unit: habit.unit,
+          sortOrder: effectiveSortOrder,
+          enabled,
+          effectiveTargetMinutes,
+          effectiveTargetCount,
+          record,
+        };
+      })
+      .filter((h) => h.enabled)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    // Transparent Daily Progress calculation
+    let totalProgress = 0;
+    habitsWithRecords.forEach((h) => {
+      if (!h.record) return;
+
+      if (h.record.status === 'completed') {
+        totalProgress += 100;
+      } else if (h.record.status === 'in_progress') {
+        if (h.type === 'duration' && h.effectiveTargetMinutes && h.record.durationMinutes) {
+          const pct = Math.min(100, Math.round((h.record.durationMinutes / h.effectiveTargetMinutes) * 100));
+          totalProgress += pct;
+        } else if (h.type === 'count' && h.effectiveTargetCount && h.record.actualCount) {
+          const pct = Math.min(100, Math.round((h.record.actualCount / h.effectiveTargetCount) * 100));
+          totalProgress += pct;
+        }
+      }
+    });
+
+    const completion = habitsWithRecords.length > 0
+      ? Math.round(totalProgress / habitsWithRecords.length)
+      : 0;
 
     const streaks = await streakRepository.get(userId);
     const motivation = getDailyMotivation();
@@ -39,21 +82,26 @@ export const recordService = {
       completion,
       motivation,
       streaks: streaks || { currentStreak: 0, longestStreak: 0, lastActivityDate: null },
+      reflection,
     };
   },
 
   async upsertRecord(userId: string, input: HabitRecordCreateInput) {
     const date = new Date(input.date + 'T00:00:00Z');
 
-    const record = await recordRepository.upsert(userId, input.habitId, date, {
+    const habit = await habitRepository.findBySlug(input.habitId) || null;
+    const habitId = habit ? habit.id : input.habitId;
+
+    const record = await recordRepository.upsert(userId, habitId, date, {
       status: input.status,
       completedAt: input.completedAt ? new Date(input.completedAt) : input.status === 'completed' ? new Date() : null,
       notes: input.notes || null,
       skipReason: input.skipReason || null,
-      durationMinutes: input.durationMinutes || null,
+      durationMinutes: input.durationMinutes ?? null,
+      actualCount: input.actualCount ?? null,
       date,
       userId,
-      habitId: input.habitId,
+      habitId,
     } as any);
 
     await this.updateStreaks(userId, date);
@@ -74,6 +122,7 @@ export const recordService = {
     if (input.notes !== undefined) updateData.notes = input.notes;
     if (input.skipReason !== undefined) updateData.skipReason = input.skipReason;
     if (input.durationMinutes !== undefined) updateData.durationMinutes = input.durationMinutes;
+    if (input.actualCount !== undefined) updateData.actualCount = input.actualCount;
 
     const updated = await recordRepository.update(recordId, updateData as any);
 
@@ -87,27 +136,64 @@ export const recordService = {
     const date = new Date(dateStr + 'T00:00:00Z');
     const habits = await habitRepository.findAll();
     const records = await recordRepository.findByUserAndDate(userId, date);
+    const userHabitSettings = await userHabitSettingRepository.findByUser(userId);
+    const reflection = await reflectionRepository.findByUserAndDate(userId, date);
 
     const recordsMap = new Map(records.map((r) => [r.habitId, r]));
+    const settingsMap = new Map(userHabitSettings.map((s) => [s.habitId, s]));
 
-    const habitsWithRecords = habits.map((habit) => ({
-      id: habit.id,
-      slug: habit.slug,
-      label: habit.label,
-      icon: habit.icon,
-      description: habit.description,
-      targetMinutes: habit.targetMinutes,
-      sortOrder: habit.sortOrder,
-      record: recordsMap.get(habit.id) || null,
-    }));
+    const habitsWithRecords = habits.map((habit) => {
+      const userSetting = settingsMap.get(habit.id);
+      const record = recordsMap.get(habit.id) || null;
 
-    const completedCount = records.filter((r) => r.status === 'completed').length;
-    const completion = habits.length > 0 ? Math.round((completedCount / habits.length) * 100) : 0;
+      const enabled = userSetting ? userSetting.enabled : true;
+      const effectiveTargetMinutes = userSetting?.customTargetMinutes ?? habit.targetMinutes ?? null;
+      const effectiveTargetCount = userSetting?.customTargetCount ?? habit.targetCount ?? null;
+
+      return {
+        id: habit.id,
+        slug: habit.slug,
+        label: habit.label,
+        icon: habit.icon,
+        description: habit.description,
+        type: habit.type as 'binary' | 'duration' | 'count' | 'custom',
+        targetMinutes: habit.targetMinutes,
+        targetCount: habit.targetCount,
+        unit: habit.unit,
+        sortOrder: habit.sortOrder,
+        enabled,
+        effectiveTargetMinutes,
+        effectiveTargetCount,
+        record,
+      };
+    });
+
+    let totalProgress = 0;
+    const activeHabits = habitsWithRecords.filter((h) => h.enabled);
+    activeHabits.forEach((h) => {
+      if (!h.record) return;
+      if (h.record.status === 'completed') {
+        totalProgress += 100;
+      } else if (h.record.status === 'in_progress') {
+        if (h.type === 'duration' && h.effectiveTargetMinutes && h.record.durationMinutes) {
+          totalProgress += Math.min(100, Math.round((h.record.durationMinutes / h.effectiveTargetMinutes) * 100));
+        } else if (h.type === 'count' && h.effectiveTargetCount && h.record.actualCount) {
+          totalProgress += Math.min(100, Math.round((h.record.actualCount / h.effectiveTargetCount) * 100));
+        }
+      }
+    });
+
+    const completion = activeHabits.length > 0 ? Math.round(totalProgress / activeHabits.length) : 0;
+    const streaks = await streakRepository.get(userId);
+    const motivation = getDailyMotivation();
 
     return {
       date: dateStr,
       habits: habitsWithRecords,
       completion,
+      motivation,
+      streaks: streaks || { currentStreak: 0, longestStreak: 0, lastActivityDate: null },
+      reflection,
     };
   },
 
@@ -134,65 +220,161 @@ export const recordService = {
   },
 
   async getMonthlyAnalytics(userId: string, year: number, month: number) {
-    const records = await recordRepository.getMonthlyData(userId, year, month);
+    const currentRecords = await recordRepository.getMonthlyData(userId, year, month);
     const habits = await habitRepository.findAll();
 
-    const dailyMap = new Map<string, { total: number; completed: number }>();
-    const habitCounts = new Map<string, { total: number; completed: number }>();
+    // Fetch previous month records for Month-over-Month comparison
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    const previousRecords = await recordRepository.getMonthlyData(userId, prevYear, prevMonth);
 
-    habits.forEach((h) => habitCounts.set(h.id, { total: 0, completed: 0 }));
+    // Process current month
+    const dailyMap = new Map<string, { total: number; completed: number; progressSum: number }>();
+    const habitCounts = new Map<string, { total: number; completed: number; durationSum: number }>();
 
-    records.forEach((r) => {
+    habits.forEach((h) => habitCounts.set(h.id, { total: 0, completed: 0, durationSum: 0 }));
+
+    let quranTotalMinutes = 0;
+    let exerciseTotalMinutes = 0;
+    let learningTotalMinutes = 0;
+
+    currentRecords.forEach((r) => {
       const dateStr = r.date.toISOString().split('T')[0];
       if (!dailyMap.has(dateStr)) {
-        dailyMap.set(dateStr, { total: habits.length, completed: 0 });
+        dailyMap.set(dateStr, { total: habits.length, completed: 0, progressSum: 0 });
       }
       const day = dailyMap.get(dateStr)!;
-      if (r.status === 'completed') day.completed++;
+      if (r.status === 'completed') {
+        day.completed++;
+        day.progressSum += 100;
+      } else if (r.status === 'in_progress' && r.durationMinutes) {
+        const target = r.habit?.targetMinutes || 30;
+        day.progressSum += Math.min(100, Math.round((r.durationMinutes / target) * 100));
+      }
 
       const habitCount = habitCounts.get(r.habitId);
       if (habitCount) {
         habitCount.total++;
         if (r.status === 'completed') habitCount.completed++;
+        if (r.durationMinutes) habitCount.durationSum += r.durationMinutes;
+      }
+
+      if (r.durationMinutes) {
+        if (r.habit?.slug === 'quran') quranTotalMinutes += r.durationMinutes;
+        if (r.habit?.slug === 'exercise') exerciseTotalMinutes += r.durationMinutes;
+        if (r.habit?.slug === 'islamic_learning') learningTotalMinutes += r.durationMinutes;
       }
     });
 
     const dailyData = Array.from(dailyMap.entries())
       .map(([date, data]) => ({
         date,
-        completion: Math.round((data.completed / data.total) * 100),
+        completion: Math.round(data.progressSum / habits.length),
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
+    const totalDaysInMonth = new Date(year, month, 0).getDate();
     const habitBreakdown = habits.map((h) => {
       const count = habitCounts.get(h.id);
+      const completedDays = count?.completed || 0;
       return {
         habit: h,
-        completion: count && count.total > 0 ? Math.round((count.completed / count.total) * 100) : 0,
+        completedDays,
+        totalDays: totalDaysInMonth,
+        completion: Math.round((completedDays / totalDaysInMonth) * 100),
       };
     });
 
-    const weeks = Math.ceil(dailyData.length / 7);
+    // Best habit
+    let bestHabit = habitBreakdown.length > 0
+      ? habitBreakdown.reduce((prev, curr) => (curr.completion > prev.completion ? curr : prev))
+      : null;
+
+    const weeks = Math.ceil(dailyData.length / 7) || 1;
     const weeklyTrends = Array.from({ length: weeks }, (_, i) => {
       const weekData = dailyData.slice(i * 7, (i + 1) * 7);
-      const avg = weekData.reduce((sum, d) => sum + d.completion, 0) / weekData.length;
+      const avg = weekData.length > 0 ? weekData.reduce((sum, d) => sum + d.completion, 0) / weekData.length : 0;
       return { week: i + 1, completion: Math.round(avg) };
     });
 
-    const allCompleted = records.filter((r) => r.status === 'completed').length;
-    const totalPossible = habits.length * (new Date(year, month, 0).getDate());
+    let mostConsistentWeek = weeklyTrends.length > 0
+      ? weeklyTrends.reduce((prev, curr) => (curr.completion > prev.completion ? curr : prev))
+      : null;
+
+    const totalTrackedDays = dailyMap.size;
+    const allCompleted = currentRecords.filter((r) => r.status === 'completed').length;
+    const totalPossible = habits.length * totalDaysInMonth;
     const completionPercentage = totalPossible > 0 ? Math.round((allCompleted / totalPossible) * 100) : 0;
 
     const streaks = await streakRepository.get(userId);
+
+    // Process previous month statistics for Month-over-Month comparison
+    let prevQuran = 0, prevExercise = 0, prevLearning = 0, prevCompleted = 0;
+    const prevDaySet = new Set<string>();
+    const prevHabitCompletedMap = new Map<string, number>();
+
+    previousRecords.forEach((r) => {
+      prevDaySet.add(r.date.toISOString().split('T')[0]);
+      if (r.status === 'completed') {
+        prevCompleted++;
+        prevHabitCompletedMap.set(r.habitId, (prevHabitCompletedMap.get(r.habitId) || 0) + 1);
+      }
+      if (r.durationMinutes) {
+        if (r.habit?.slug === 'quran') prevQuran += r.durationMinutes;
+        if (r.habit?.slug === 'exercise') prevExercise += r.durationMinutes;
+        if (r.habit?.slug === 'islamic_learning') prevLearning += r.durationMinutes;
+      }
+    });
+
+    const prevDaysInMonth = new Date(prevYear, prevMonth, 0).getDate();
+    const prevPossible = habits.length * prevDaysInMonth;
+    const prevCompletionPct = prevPossible > 0 ? Math.round((prevCompleted / prevPossible) * 100) : 0;
+
+    const calcMetric = (curr: number, prev: number) => {
+      const delta = curr - prev;
+      const pctChange = prev > 0 ? Math.round((delta / prev) * 100) : null;
+      const trend: 'up' | 'down' | 'same' = delta > 0 ? 'up' : delta < 0 ? 'down' : 'same';
+      return { current: curr, previous: prev, delta, percentageChange: pctChange, trend };
+    };
+
+    const comparison = {
+      completionPercentage: calcMetric(completionPercentage, prevCompletionPct),
+      trackedDays: calcMetric(totalTrackedDays, prevDaySet.size),
+      quranMinutes: calcMetric(quranTotalMinutes, prevQuran),
+      exerciseMinutes: calcMetric(exerciseTotalMinutes, prevExercise),
+      learningMinutes: calcMetric(learningTotalMinutes, prevLearning),
+      streak: calcMetric(streaks?.currentStreak || 0, 0),
+      habitComparison: habits.map((h) => {
+        const currCompleted = habitCounts.get(h.id)?.completed || 0;
+        const prevCompletedHabit = prevHabitCompletedMap.get(h.id) || 0;
+        const currPct = Math.round((currCompleted / totalDaysInMonth) * 100);
+        const prevPct = Math.round((prevCompletedHabit / prevDaysInMonth) * 100);
+        return {
+          habitId: h.id,
+          habitSlug: h.slug,
+          habitLabel: h.label,
+          currentCompletion: currPct,
+          previousCompletion: prevPct,
+          trend: currPct > prevPct ? ('up' as const) : currPct < prevPct ? ('down' as const) : ('same' as const),
+        };
+      }),
+    };
 
     return {
       month,
       year,
       streaks: streaks || { currentStreak: 0, longestStreak: 0, lastActivityDate: null },
       completionPercentage,
+      totalTrackedDays,
+      quranTotalMinutes,
+      exerciseTotalMinutes,
+      learningTotalMinutes,
+      bestHabit: bestHabit ? { slug: bestHabit.habit.slug, label: bestHabit.habit.label, completion: bestHabit.completion } : null,
+      mostConsistentWeek,
       dailyData,
       habitBreakdown,
       weeklyTrends,
+      comparison,
     };
   },
 
@@ -203,8 +385,6 @@ export const recordService = {
     const records = await recordRepository.findByUserAndDateRange(userId, start, end);
     const habits = await habitRepository.findAll();
 
-    const habitsMap = new Map(habits.map((h) => [h.id, h]));
-
     const dailyCompletion = new Map<string, { total: number; completed: number }>();
     const habitData = new Map<string, { completed: number; skippedReasons: { date: string; reason: string }[] }>();
 
@@ -212,7 +392,6 @@ export const recordService = {
       habitData.set(h.id, { completed: 0, skippedReasons: [] });
     });
 
-    let totalDays = 0;
     const daySet = new Set<string>();
 
     records.forEach((r) => {
@@ -235,7 +414,7 @@ export const recordService = {
       }
     });
 
-    totalDays = daySet.size;
+    const totalDays = daySet.size;
 
     const weeklyHabitsData = habits.map((h) => {
       const hd = habitData.get(h.id);
@@ -286,19 +465,17 @@ export const recordService = {
   async updateStreaks(userId: string, activityDate: Date) {
     const habits = await habitRepository.findAll();
     const records = await recordRepository.findByUserAndDate(userId, activityDate);
+
+    // Duration and binary completion check
     const completedCount = records.filter((r) => r.status === 'completed').length;
 
-    if (habits.length > 0 && completedCount < habits.length) {
+    if (habits.length > 0 && completedCount < Math.ceil(habits.length * 0.5)) {
       return;
     }
 
     const streaks = await streakRepository.get(userId);
     const currentStreak = streaks?.currentStreak || 0;
     const longestStreak = streaks?.longestStreak || 0;
-
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
 
     const lastActivity = streaks?.lastActivityDate
       ? new Date(streaks.lastActivityDate)
@@ -327,4 +504,3 @@ export const recordService = {
     await streakRepository.upsert(userId, newCurrent, newLongest, activityDate);
   },
 };
-
