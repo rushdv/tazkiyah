@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { userRepository } from '../repositories/user.repository';
+import { userHabitSettingRepository } from '../repositories/userHabitSetting.repository';
 import { habitRepository } from '../repositories/habit.repository';
 import { streakRepository } from '../repositories/streak.repository';
 import { generateTokenPair, verifyRefreshToken } from '../utils/jwt';
@@ -217,6 +218,24 @@ export const authService = {
 
   async updateSettings(userId: string, input: UpdateSettingsInput) {
     return userRepository.updateSettings(userId, input);
+  },
+
+  async getHabitSettings(userId: string) {
+    return userHabitSettingRepository.findByUser(userId);
+  },
+
+  async updateHabitSettings(
+    userId: string,
+    input: { habitId: string; enabled?: boolean; customTargetMinutes?: number | null; customTargetCount?: number | null; sortOrder?: number }[],
+  ) {
+    return userHabitSettingRepository.upsertMany(userId, input);
+  },
+
+  async exportUserData(userId: string) {
+    const data = await userRepository.exportFullUserData(userId);
+    if (!data) throw new AppError('User not found', 404);
+    const { passwordHash, refreshToken, resetToken, resetTokenExp, ...exported } = data;
+    return exported;
   },
 };
 

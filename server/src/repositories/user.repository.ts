@@ -76,7 +76,17 @@ export const userRepository = {
     });
   },
 
-  async updateSettings(userId: string, data: { reminderEnabled?: boolean; duaReminder?: boolean; quranReminder?: boolean }) {
+  async updateSettings(
+    userId: string,
+    data: {
+      reminderEnabled?: boolean;
+      duaReminder?: boolean;
+      quranReminder?: boolean;
+      dailyReflectionReminder?: boolean;
+      weekStartDay?: string;
+      language?: string;
+    },
+  ) {
     return prisma.setting.upsert({
       where: { userId },
       create: {
@@ -86,5 +96,20 @@ export const userRepository = {
       update: data,
     });
   },
-};
 
+  async exportFullUserData(userId: string) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        settings: true,
+        habitSettings: { include: { habit: true } },
+        habitRecords: { include: { habit: true } },
+        reflections: true,
+        streaks: true,
+        achievements: { include: { achievement: true } },
+        reminders: { include: { habit: true } },
+        reports: true,
+      },
+    });
+  },
+};
