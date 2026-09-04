@@ -9,6 +9,11 @@ export const habitSlugs = [
   'islamic_learning',
 ] as const;
 
+export const habitTypes = ['binary', 'duration', 'count', 'custom'] as const;
+export const habitStatuses = ['completed', 'skipped', 'pending', 'in_progress'] as const;
+export const reflectionMoods = ['excellent', 'good', 'okay', 'difficult'] as const;
+export const weekStartDays = ['monday', 'sunday', 'saturday'] as const;
+
 export const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   email: z.string().email('Invalid email address'),
@@ -83,20 +88,45 @@ export const updateSettingsSchema = z.object({
   reminderEnabled: z.boolean().optional(),
   duaReminder: z.boolean().optional(),
   quranReminder: z.boolean().optional(),
+  dailyReflectionReminder: z.boolean().optional(),
+  weekStartDay: z.enum(weekStartDays).optional(),
+  language: z.string().optional(),
 });
-
 
 export const habitRecordCreateSchema = z.object({
   habitId: z.string().uuid(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
-  status: z.enum(['completed', 'skipped']),
+  status: z.enum(habitStatuses),
   completedAt: z.string().nullable().optional(),
   notes: z.string().max(500).nullable().optional(),
   skipReason: z.string().max(500).nullable().optional(),
-  durationMinutes: z.number().int().min(1).max(1440).nullable().optional(),
+  durationMinutes: z.number().int().min(0).max(1440).nullable().optional(),
+  actualCount: z.number().int().min(0).max(100000).nullable().optional(),
 });
 
 export const habitRecordUpdateSchema = habitRecordCreateSchema.partial();
+
+export const reflectionSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  mood: z.enum(reflectionMoods),
+  notes: z.string().max(1000).nullable().optional(),
+  improvement: z.string().max(1000).nullable().optional(),
+});
+
+export const reportGenerateSchema = z.object({
+  title: z.string().min(1).max(200),
+  periodType: z.enum(['monthly', 'weekly', 'custom']),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+export const userHabitSettingSchema = z.object({
+  habitId: z.string().uuid(),
+  enabled: z.boolean().optional(),
+  customTargetMinutes: z.number().int().min(1).max(1440).nullable().optional(),
+  customTargetCount: z.number().int().min(1).max(10000).nullable().optional(),
+  sortOrder: z.number().int().optional(),
+});
 
 export const reminderCreateSchema = z.object({
   habitId: z.string().uuid(),
@@ -115,7 +145,7 @@ export const paginationSchema = z.object({
   search: z.string().optional(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  status: z.enum(['completed', 'skipped', 'pending']).optional(),
+  status: z.enum(habitStatuses).optional(),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -128,6 +158,9 @@ export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 export type HabitRecordCreateInput = z.infer<typeof habitRecordCreateSchema>;
 export type HabitRecordUpdateInput = z.infer<typeof habitRecordUpdateSchema>;
+export type ReflectionInput = z.infer<typeof reflectionSchema>;
+export type ReportGenerateInput = z.infer<typeof reportGenerateSchema>;
+export type UserHabitSettingInput = z.infer<typeof userHabitSettingSchema>;
 export type ReminderCreateInput = z.infer<typeof reminderCreateSchema>;
 export type ReminderUpdateInput = z.infer<typeof reminderUpdateSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
