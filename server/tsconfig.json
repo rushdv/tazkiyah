@@ -13,10 +13,10 @@
     "sourceMap": true,
     "moduleResolution": "node",
     "paths": {
-      "@tazkiyah/shared": ["../shared"],
-      "@tazkiyah/shared/*": ["../shared/*"]
+      "@tazkiyah/shared": ["../shared/dist"],
+      "@tazkiyah/shared/*": ["../shared/dist/*"]
     }
   },
-  "include": ["src/**/*", "../shared/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
