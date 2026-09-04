@@ -1,0 +1,5 @@
+{
+  "buildCommand": "npx prisma generate && cd ../shared && npm run build && cd ../client && tsc -b && vite build",
+  "outputDirectory": "../client/dist",
+  "framework": "vite"
+}
