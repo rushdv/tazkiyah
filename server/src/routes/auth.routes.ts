@@ -28,6 +28,9 @@ router.post('/change-password', validate(changePasswordSchema), authController.c
 router.patch('/profile', validate(updateProfileSchema), authController.updateProfile);
 router.get('/settings', authController.getSettings);
 router.patch('/settings', validate(updateSettingsSchema), authController.updateSettings);
+router.get('/settings/habits', authController.getHabitSettings);
+router.patch('/settings/habits', authController.updateHabitSettings);
+router.get('/export-data', authController.exportData);
 
 export default router;
 

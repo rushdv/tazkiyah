@@ -102,5 +102,32 @@ export const authController = {
       next(error);
     }
   },
+
+  async getHabitSettings(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const settings = await authService.getHabitSettings(req.userId!);
+      sendSuccess(res, { data: settings });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async updateHabitSettings(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const settings = await authService.updateHabitSettings(req.userId!, req.body);
+      sendSuccess(res, { data: settings, message: 'Habit settings updated successfully' });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async exportData(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const data = await authService.exportUserData(req.userId!);
+      sendSuccess(res, { data, message: 'Data exported successfully' });
+    } catch (error) {
+      next(error);
+    }
+  },
 };
 
