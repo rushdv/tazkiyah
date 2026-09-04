@@ -7,98 +7,111 @@ import {
   GraduationCap,
   Sparkles,
   BarChart3,
-  Shield,
+  ShieldCheck,
   Moon,
-  Sun,
   ArrowRight,
-  CheckCircle2,
+  FileText,
+  HeartHandshake,
+  Calendar,
 } from 'lucide-react';
 
 const features = [
-  { icon: BookOpen, title: 'Daily Worship', description: 'Track Quran reading, azkar, and duas' },
-  { icon: BarChart3, title: 'Beautiful Analytics', description: 'Visualize your spiritual progress' },
-  { icon: Shield, title: 'Streak Tracking', description: 'Build consistency with streaks' },
-  { icon: Sparkles, title: 'Daily Inspiration', description: 'Ayahs and hadiths to motivate you' },
+  { icon: BookOpen, title: 'Daily Worship & Learning', description: 'Track Quran reading, morning/evening azkar, dua, and Islamic learning.' },
+  { icon: BarChart3, title: 'Month-over-Month Growth', description: 'Visualize trends, duration totals, and consistency with interactive analytics.' },
+  { icon: FileText, title: 'Real PDF Reports', description: 'Export 5-page PDF progress reports for monthly reflections.' },
+  { icon: ShieldCheck, title: 'Private & Trustworthy', description: 'Your personal reflections and data belong solely to you.' },
 ];
 
 const habits = [
-  { icon: BookOpen, label: 'Morning & Evening Azkar' },
-  { icon: Sparkles, label: 'Dua' },
-  { icon: BookOpen, label: 'Quran (30 min)' },
-  { icon: Dumbbell, label: 'Exercise (25 min)' },
-  { icon: GraduationCap, label: 'Islamic Learning (30 min)' },
+  { icon: BookOpen, label: 'Morning & Evening Azkar', type: 'Binary Habit' },
+  { icon: Sparkles, label: 'Dua & Supplication', type: 'Binary Habit' },
+  { icon: BookOpen, label: 'Quran Reading (30 min)', type: 'Duration Goal' },
+  { icon: Dumbbell, label: 'Physical Exercise (25 min)', type: 'Duration Goal' },
+  { icon: GraduationCap, label: 'Islamic Learning (30 min)', type: 'Duration Goal' },
 ];
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen">
-      <header className="fixed top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Navigation Header */}
+      <header className="fixed top-0 z-50 w-full border-b border-border/60 bg-background/85 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-sm font-bold text-primary-foreground">T</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold shadow-sm">
+              T
             </div>
-            <span className="text-lg font-semibold">Tazkiyah</span>
+            <span className="text-xl font-bold tracking-tight">Tazkiyah</span>
           </div>
-          <div className="flex items-center gap-4">
+
+          <div className="flex items-center gap-3">
             <Link to="/auth/login">
-              <Button variant="ghost">Sign In</Button>
+              <Button variant="ghost" size="sm" className="text-xs">Sign In</Button>
             </Link>
             <Link to="/auth/register">
-              <Button>Get Started</Button>
+              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium">
+                Start Your Journey
+              </Button>
             </Link>
           </div>
         </div>
       </header>
 
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-24 overflow-hidden border-b border-border/40">
         <div className="container relative">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mx-auto max-w-3xl text-center"
+            className="mx-auto max-w-3xl text-center space-y-6"
           >
-            <div className="mb-6 inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm text-primary">
-              <Moon className="mr-2 h-4 w-4" />
-              Islamic Habit Tracker
+            <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-xs font-semibold text-accent">
+              <Moon className="h-3.5 w-3.5" />
+              Build Better Habits. Strengthen Your Deen.
             </div>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-              Build Better Habits.
-              <br />
-              <span className="text-primary">Strengthen Your Deen.</span>
+
+            <h1 className="text-4xl font-bold tracking-tight sm:text-6xl text-foreground">
+              A calm space for worship, learning, and daily consistency.
             </h1>
-            <p className="mt-6 text-lg text-muted-foreground">
-              Tazkiyah helps Muslims consistently maintain their daily worship, build positive habits,
-              and monitor their spiritual progress through beautiful analytics and weekly reports.
+
+            <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Tazkiyah helps you build sustainable habits in prayer, Quran, exercise, and knowledge. Reflect on your daily progress without feeling judged.
             </p>
-            <div className="mt-8 flex justify-center gap-4">
+
+            <div className="pt-2 flex flex-wrap justify-center gap-4">
               <Link to="/auth/register">
-                <Button size="lg" className="gap-2">
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium gap-2 px-6">
                   Start Your Journey <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
               <Link to="/auth/login">
-                <Button size="lg" variant="outline">
+                <Button size="lg" variant="outline" className="px-6">
                   Sign In
                 </Button>
               </Link>
             </div>
           </motion.div>
 
+          {/* Core Habits Preview */}
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mx-auto mt-16 max-w-2xl"
+            transition={{ delay: 0.15 }}
+            className="mx-auto mt-16 max-w-3xl"
           >
-            <div className="glass-card p-8">
-              <h3 className="mb-6 text-center text-lg font-semibold">Track These Habits</h3>
+            <div className="glass-card p-6 sm:p-8 space-y-4">
+              <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Core Daily Habits</h3>
+                <span className="text-xs text-accent font-semibold">Flexible Tracking</span>
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-2">
                 {habits.map((habit) => (
-                  <div key={habit.label} className="flex items-center gap-3 rounded-lg bg-secondary/50 p-3">
-                    <habit.icon className="h-5 w-5 text-primary" />
-                    <span className="text-sm">{habit.label}</span>
+                  <div key={habit.label} className="flex items-center justify-between p-3.5 rounded-xl bg-card border border-border/60">
+                    <div className="flex items-center gap-3">
+                      <habit.icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-xs font-semibold">{habit.label}</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground font-medium">{habit.type}</span>
                   </div>
                 ))}
               </div>
@@ -107,38 +120,46 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20">
-        <div className="container">
-          <h2 className="text-center text-3xl font-bold">Why Tazkiyah?</h2>
-          <div className="mt-12 grid gap-6 md:grid-cols-4">
+      {/* Features Grid */}
+      <section className="py-20 bg-muted/20">
+        <div className="container space-y-12">
+          <div className="text-center max-w-xl mx-auto space-y-2">
+            <h2 className="text-3xl font-bold tracking-tight">Designed for Meaningful Progress</h2>
+            <p className="text-xs text-muted-foreground">
+              Built with care to support your spiritual growth, clarity, and personal consistency.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-4">
             {features.map((feature) => (
               <motion.div
                 key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="glass-card p-6 text-center"
+                className="glass-card p-6 text-center space-y-3"
               >
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                  <feature.icon className="h-6 w-6 text-primary" />
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <feature.icon className="h-6 w-6" />
                 </div>
-                <h3 className="font-semibold">{feature.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{feature.description}</p>
+                <h3 className="font-semibold text-base">{feature.title}</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-20 bg-secondary/30">
+      {/* CTA Footer */}
+      <section className="py-20 border-t border-border/60">
         <div className="container">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold">Ready to Transform Your Habits?</h2>
-            <p className="mt-4 text-muted-foreground">
-              Join thousands of Muslims using Tazkiyah to strengthen their deen.
+          <div className="mx-auto max-w-xl text-center space-y-6">
+            <h2 className="text-3xl font-bold tracking-tight">Begin Your Journey Today</h2>
+            <p className="text-xs text-muted-foreground">
+              Small consistent steps, every single day.
             </p>
             <Link to="/auth/register">
-              <Button size="lg" className="mt-8 gap-2">
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium gap-2 px-8">
                 Get Started Free <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -146,10 +167,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-border py-8">
-        <div className="container text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Tazkiyah. Built with faith.</p>
-        </div>
+      <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
+        <p>&copy; {new Date().getFullYear()} Tazkiyah. Build Better Habits. Strengthen Your Deen.</p>
       </footer>
     </div>
   );

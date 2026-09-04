@@ -8,11 +8,13 @@ import RegisterPage from './pages/register';
 import DashboardPage from './pages/dashboard';
 import CalendarPage from './pages/calendar';
 import AnalyticsPage from './pages/analytics';
-import WeeklyReportPage from './pages/weekly-report';
+import MonthlyReviewPage from './pages/monthly-review';
+import ReportsPage from './pages/reports';
 import HistoryPage from './pages/history';
 import AchievementsPage from './pages/achievements';
 import SettingsPage from './pages/settings';
 import ProfilePage from './pages/profile';
+import OnboardingPage from './pages/onboarding';
 import LandingPage from './pages/landing';
 import NotFoundPage from './pages/not-found';
 
@@ -61,6 +63,14 @@ export default function App() {
             }
           />
           <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <OnboardingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             element={
               <ProtectedRoute>
                 <AppLayout />
@@ -68,10 +78,11 @@ export default function App() {
             }
           >
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/weekly-report" element={<WeeklyReportPage />} />
             <Route path="/history" element={<HistoryPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/monthly-review" element={<MonthlyReviewPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/achievements" element={<AchievementsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
