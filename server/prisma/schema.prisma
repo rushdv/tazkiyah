@@ -3,64 +3,50 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
-enum HabitSlug {
-  morning_azkar
-  evening_azkar
-  dua
-  quran
-  exercise
-  islamic_learning
-}
-
-enum HabitStatus {
-  completed
-  skipped
-  pending
-}
-
-enum ReminderType {
-  fajr
-  maghrib
-  custom
-}
-
 model User {
-  id             String         @id @default(uuid())
-  email          String         @unique
+  id             String             @id @default(uuid())
+  email          String             @unique
   passwordHash   String
   name           String
   avatar         String?
-  theme          String         @default("dark")
-  timezone       String         @default("UTC")
+  theme          String             @default("dark")
+  timezone       String             @default("UTC")
   refreshToken   String?
   resetToken     String?
   resetTokenExp  DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   habitRecords   HabitRecord[]
   streaks        Streak[]
   achievements   UserAchievement[]
   reminders      Reminder[]
   settings       Setting?
+  reflections    Reflection[]
+  reports        Report[]
+  habitSettings  UserHabitSetting[]
 }
 
 model Habit {
-  id          String      @id @default(uuid())
-  slug        HabitSlug   @unique
-  label       String
-  icon        String
-  description String
+  id            String             @id @default(uuid())
+  slug          String             @unique
+  label         String
+  icon          String
+  description   String
+  type          String             @default("binary") // binary | duration | count | custom
   targetMinutes Int?
-  sortOrder   Int
-  createdAt   DateTime    @default(now())
+  targetCount   Int?
+  unit          String?
+  sortOrder     Int
+  createdAt     DateTime           @default(now())
 
-  records     HabitRecord[]
-  reminders   Reminder[]
+  records       HabitRecord[]
+  reminders     Reminder[]
+  userSettings  UserHabitSetting[]
 }
 
 model HabitRecord {
@@ -68,11 +54,12 @@ model HabitRecord {
   userId          String
   habitId         String
   date            DateTime
-  status          HabitStatus @default(pending)
+  status          String      @default("pending") // completed | skipped | pending | in_progress
   completedAt     DateTime?
   notes           String?
   skipReason      String?
   durationMinutes Int?
+  actualCount     Int?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -84,35 +71,53 @@ model HabitRecord {
   @@index([habitId])
 }
 
+model UserHabitSetting {
+  id                  String   @id @default(uuid())
+  userId              String
+  habitId             String
+  enabled             Boolean  @default(true)
+  customTargetMinutes Int?
+  customTargetCount   Int?
+  sortOrder           Int?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, habitId])
+  @@index([userId])
+}
+
 model Streak {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  currentStreak   Int      @default(0)
-  longestStreak   Int      @default(0)
+  id               String    @id @default(uuid())
+  userId           String    @unique
+  currentStreak    Int       @default(0)
+  longestStreak    Int       @default(0)
   lastActivityDate DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Achievement {
-  id          String   @id @default(uuid())
-  slug        String   @unique
+  id          String            @id @default(uuid())
+  slug        String            @unique
   title       String
   description String
   icon        String
   targetValue Int
-  createdAt   DateTime @default(now())
+  createdAt   DateTime          @default(now())
 
   users UserAchievement[]
 }
 
 model UserAchievement {
-  id            String   @id @default(uuid())
+  id            String      @id @default(uuid())
   userId        String
   achievementId String
-  progress      Int      @default(0)
+  progress      Int         @default(0)
   unlockedAt    DateTime?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime    @default(now())
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
@@ -121,14 +126,14 @@ model UserAchievement {
 }
 
 model Reminder {
-  id        String       @id @default(uuid())
+  id        String   @id @default(uuid())
   userId    String
   habitId   String
-  enabled   Boolean      @default(true)
+  enabled   Boolean  @default(true)
   time      String
-  type      ReminderType
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  type      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
@@ -137,13 +142,47 @@ model Reminder {
 }
 
 model Setting {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  reminderEnabled Boolean @default(true)
-  duaReminder   Boolean  @default(true)
-  quranReminder Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                     String   @id @default(uuid())
+  userId                 String   @unique
+  reminderEnabled        Boolean  @default(true)
+  duaReminder            Boolean  @default(true)
+  quranReminder          Boolean  @default(true)
+  dailyReflectionReminder Boolean @default(true)
+  weekStartDay           String   @default("monday") // monday | sunday | saturday
+  language               String   @default("en")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Reflection {
+  id          String   @id @default(uuid())
+  userId      String
+  date        DateTime
+  mood        String // excellent | good | okay | difficult
+  notes       String?
+  improvement String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  periodType  String // monthly | weekly | custom
+  startDate   DateTime
+  endDate     DateTime
+  summaryData String // JSON string snapshot
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
