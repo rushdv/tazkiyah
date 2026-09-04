@@ -6,17 +6,26 @@ export async function seed() {
   await connectDatabase();
 
   console.log('[Seed] Creating default habits...');
-  await prisma.habit.createMany({
-    data: DEFAULT_HABITS.map((h) => ({
-      slug: h.slug,
-      label: h.label,
-      icon: h.icon,
-      description: h.description,
-      targetMinutes: h.targetMinutes,
-      sortOrder: h.sortOrder,
-    })),
-    skipDuplicates: true,
-  });
+  for (const h of DEFAULT_HABITS) {
+    await prisma.habit.upsert({
+      where: { slug: h.slug },
+      update: {
+        label: h.label,
+        icon: h.icon,
+        description: h.description,
+        targetMinutes: h.targetMinutes,
+        sortOrder: h.sortOrder,
+      },
+      create: {
+        slug: h.slug,
+        label: h.label,
+        icon: h.icon,
+        description: h.description,
+        targetMinutes: h.targetMinutes,
+        sortOrder: h.sortOrder,
+      },
+    });
+  }
 
   const achievements = [
     { slug: '7_day_streak', title: '7-Day Streak', description: 'Complete all habits for 7 consecutive days', icon: 'badge', targetValue: 7 },
@@ -27,10 +36,13 @@ export async function seed() {
   ];
 
   console.log('[Seed] Creating achievements...');
-  await prisma.achievement.createMany({
-    data: achievements,
-    skipDuplicates: true,
-  });
+  for (const a of achievements) {
+    await prisma.achievement.upsert({
+      where: { slug: a.slug },
+      update: a,
+      create: a,
+    });
+  }
 
   console.log('[Seed] Complete!');
   await disconnectDatabase();
