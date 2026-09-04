@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd ../shared && npm run build && cd ../client && tsc -b && vite build",
+  "buildCommand": "npm run build:shared --prefix .. && tsc -b && vite build",
   "outputDirectory": "dist",
   "framework": "vite"
 }
