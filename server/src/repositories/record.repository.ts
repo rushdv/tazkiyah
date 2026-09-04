@@ -69,7 +69,7 @@ export const recordRepository = {
     }
 
     if (params.status && params.status !== 'all') {
-      where.status = params.status as Prisma.EnumHabitStatusFilter['equals'];
+      where.status = params.status;
     }
 
     const orderBy: Prisma.HabitRecordOrderByWithRelationInput = {};
