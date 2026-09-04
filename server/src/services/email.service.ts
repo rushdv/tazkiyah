@@ -32,12 +32,12 @@ export const emailService = {
 
     try {
       await transporter.sendMail({
-        from: \`"Tazkiyah" <\${config.smtp.from}>\`,
+        from: `"Tazkiyah" <${config.smtp.from}>`,
         to: email,
-        subject: \`Reminder: \${habitName}\`,
+        subject: `Reminder: ${habitName}`,
         html,
       });
-      console.log(\`[EmailService] Sent reminder to \${email} for \${habitName}\`);
+      console.log(`[EmailService] Sent reminder to ${email} for ${habitName}`);
     } catch (error) {
       console.error('[EmailService] Failed to send email:', error);
     }
