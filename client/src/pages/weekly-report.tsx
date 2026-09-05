@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useWeeklyReport } from '@/hooks/use-analytics';
-import { Download, Printer, CheckCircle2, XCircle, TrendingUp, Award } from 'lucide-react';
+import { Download, Printer, XCircle, TrendingUp, Award } from 'lucide-react';
 
 export default function WeeklyReportPage() {
   const now = new Date();

@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Check, Sparkles, BookOpen, Dumbbell, GraduationCap, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Sparkles, BookOpen, Dumbbell, GraduationCap, ArrowRight, ShieldCheck } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 

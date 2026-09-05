@@ -79,7 +79,7 @@ export const reportService = {
     });
 
     // Find most consistent habit
-    let mostConsistentHabit = habitBreakdown.length > 0
+    const mostConsistentHabit = habitBreakdown.length > 0
       ? habitBreakdown.reduce((best, curr) => (curr.completionRate > best.completionRate ? curr : best))
       : null;
 

@@ -1,10 +1,10 @@
 import { useAuthStore } from '@/lib/auth-store';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { Mail, Calendar, Globe, Palette } from 'lucide-react';
+import { Mail, Calendar, Globe } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user } = useAuthStore();

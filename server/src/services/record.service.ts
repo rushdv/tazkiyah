@@ -286,7 +286,7 @@ export const recordService = {
     });
 
     // Best habit
-    let bestHabit = habitBreakdown.length > 0
+    const bestHabit = habitBreakdown.length > 0
       ? habitBreakdown.reduce((prev, curr) => (curr.completion > prev.completion ? curr : prev))
       : null;
 
@@ -297,7 +297,7 @@ export const recordService = {
       return { week: i + 1, completion: Math.round(avg) };
     });
 
-    let mostConsistentWeek = weeklyTrends.length > 0
+    const mostConsistentWeek = weeklyTrends.length > 0
       ? weeklyTrends.reduce((prev, curr) => (curr.completion > prev.completion ? curr : prev))
       : null;
 

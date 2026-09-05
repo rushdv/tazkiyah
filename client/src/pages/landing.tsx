@@ -11,8 +11,6 @@ import {
   Moon,
   ArrowRight,
   FileText,
-  HeartHandshake,
-  Calendar,
 } from 'lucide-react';
 
 const features = [

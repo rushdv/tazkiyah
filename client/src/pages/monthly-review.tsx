@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarDays, FileText, TrendingUp, Flame, BookOpen, Dumbbell, GraduationCap, ChevronLeft, ChevronRight, Sparkles, CheckCircle2 } from 'lucide-react';
+import { FileText, TrendingUp, Flame, BookOpen, Dumbbell, GraduationCap, ChevronLeft, ChevronRight, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { MonthlyAnalytics, ApiResponse } from '@tazkiyah/shared';
 import { toast } from 'sonner';

@@ -1,5 +1,4 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
