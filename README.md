@@ -40,7 +40,10 @@ Tazkiyah treats daily self-accountability (*Muhasabah*) with explicit distinctio
 - **Page 1 (Cover Page)**: Overall consistency score, submitted days count, streak metrics, and total spiritual/learning hours.
 - **Page 2 (Practice Breakdown)**: Completion table by practice type, total duration/count, and highest consistency habit.
 - **Pages 3-5 (Day-by-Day Journal)**: Complete daily record snapshots including Gregorian & Hijri dates, submission status, completion scores, practice breakdowns, and Muhasabah reflection notes.
-- **CSS 4 Sanitization Engine**: Intercepts DOM rendering inside `html2canvas` `onclone` to convert modern color formats (`oklch`, `oklab`, `lab`) to standard `#hex`/`rgb` colors for crash-free export.
+### 4. Practice Types & Granular Tracking
+- **Binary Habits** (Morning Azkar, Evening Azkar, Dua): Simple completion checkboxes with instant status update.
+- **Duration Goals** (Quran 30m, Exercise 25m, Islamic Learning 30m): Features live start/pause timers, fast-log buttons (`+5m`, `+10m`, `+15m`), and precise minute tracking.
+- **Count Goals**: Increment/decrement controls for targeted repetition.
 
 ---
 
