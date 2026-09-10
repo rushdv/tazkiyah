@@ -9,13 +9,16 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Search, ChevronLeft, ChevronRight, Pencil, Calendar, HeartHandshake, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Pencil, Calendar, HeartHandshake, CheckCircle2, XCircle, Clock, BookmarkCheck, ExternalLink } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { CalendarHeatmap } from '@/components/habits/calendar-heatmap';
-import type { DayDetail } from '@tazkiyah/shared';
+import type { DayDetail, ApiResponse } from '@tazkiyah/shared';
+import { getDateInfo } from '@tazkiyah/shared';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 export default function HistoryPage() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
@@ -29,7 +32,7 @@ export default function HistoryPage() {
   const { data: analyticsData } = useQuery({
     queryKey: ['analytics-heatmap', currentYear, currentMonth],
     queryFn: async () => {
-      const { data } = await api.get(`/records/analytics/${currentYear}/${currentMonth}`);
+      const { data } = await api.get<ApiResponse<any>>(`/records/analytics/${currentYear}/${currentMonth}`);
       return data.data;
     },
   });
@@ -49,8 +52,8 @@ export default function HistoryPage() {
     queryKey: ['day-detail', selectedDayDate],
     queryFn: async () => {
       if (!selectedDayDate) return null;
-      const { data } = await api.get(`/records/day/${selectedDayDate}`);
-      return data.data as DayDetail;
+      const { data } = await api.get<ApiResponse<DayDetail>>(`/records/day/${selectedDayDate}`);
+      return data.data!;
     },
     enabled: !!selectedDayDate,
   });
@@ -71,14 +74,14 @@ export default function HistoryPage() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 pb-12">
       <div className="flex items-center justify-between border-b border-border/60 pb-5">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Personal History</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Personal History & Journal</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Review past daily records, reflections, and consistency patterns.
+            Chronological log of spiritual practices, daily submissions, and muhasabah.
           </p>
         </div>
       </div>
 
-      {/* GitHub-style Consistency Heatmap */}
+      {/* Consistency Heatmap */}
       <Card className="glass-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -146,69 +149,84 @@ export default function HistoryPage() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {historyData?.data?.map((record: any) => (
-                <div
-                  key={record.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3.5 transition-all hover:bg-muted/40"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5">
-                      {record.status === 'completed' ? (
-                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                      ) : record.status === 'skipped' ? (
-                        <XCircle className="h-5 w-5 text-destructive/70" />
-                      ) : (
-                        <Clock className="h-5 w-5 text-amber-500" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm">{record.habit.label}</span>
-                        <Badge
-                          variant={
-                            record.status === 'completed'
-                              ? 'success'
-                              : record.status === 'skipped'
-                              ? 'destructive'
-                              : 'secondary'
-                          }
-                          className="text-[10px] uppercase font-bold"
-                        >
-                          {record.status}
-                        </Badge>
+              {historyData?.data?.map((record: any) => {
+                const dateInfo = getDateInfo(record.date);
+                return (
+                  <div
+                    key={record.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3.5 transition-all hover:bg-muted/40"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5">
+                        {record.status === 'completed' ? (
+                          <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                        ) : record.status === 'skipped' ? (
+                          <XCircle className="h-5 w-5 text-destructive/70" />
+                        ) : (
+                          <Clock className="h-5 w-5 text-amber-500" />
+                        )}
                       </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">{record.habit?.label || 'Habit'}</span>
+                          <Badge
+                            variant={
+                              record.status === 'completed'
+                                ? 'success'
+                                : record.status === 'skipped'
+                                ? 'destructive'
+                                : 'secondary'
+                            }
+                            className="text-[10px] uppercase font-bold"
+                          >
+                            {record.status}
+                          </Badge>
+                        </div>
 
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {format(new Date(record.date), 'EEEE, MMM d, yyyy')}
-                        {record.durationMinutes && ` • ${record.durationMinutes} mins`}
-                        {record.skipReason && ` • Reason: ${record.skipReason}`}
-                      </p>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5 font-medium">
+                          <span>{dateInfo.gregorianDisplay}</span>
+                          <span>•</span>
+                          <span className="text-accent">{dateInfo.hijriDisplay}</span>
+                          {record.durationMinutes && <span>• {record.durationMinutes} mins</span>}
+                          {record.skipReason && <span>• Reason: {record.skipReason}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-0 border-border/40">
+                      {record.notes && (
+                        <span className="text-xs text-muted-foreground italic bg-muted/30 px-2.5 py-1 rounded-lg max-w-[220px] truncate">
+                          "{record.notes}"
+                        </span>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedDayDate(format(new Date(record.date), 'yyyy-MM-dd'))}
+                        className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1"
+                      >
+                        <Calendar className="h-3.5 w-3.5 text-accent" />
+                        <span>View Day</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          setEditingRecord({
+                            id: record.id,
+                            notes: record.notes || '',
+                            durationMinutes: record.durationMinutes || null,
+                          })
+                        }
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-0 border-border/40">
-                    {record.notes && (
-                      <span className="text-xs text-muted-foreground italic bg-muted/30 px-2.5 py-1 rounded-lg max-w-[220px] truncate">
-                        "{record.notes}"
-                      </span>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() =>
-                        setEditingRecord({
-                          id: record.id,
-                          notes: record.notes || '',
-                          durationMinutes: record.durationMinutes || null,
-                        })
-                      }
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -247,16 +265,26 @@ export default function HistoryPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-lg">
-              {selectedDayDate && format(new Date(selectedDayDate + 'T00:00:00Z'), 'EEEE, MMMM d, yyyy')}
+              {dayDetail?.gregorianDisplay || (selectedDayDate && getDateInfo(selectedDayDate).gregorianDisplay)}
             </DialogTitle>
+            <DialogDescription className="text-xs text-accent font-semibold">
+              {dayDetail?.hijriDisplay || (selectedDayDate && getDateInfo(selectedDayDate).hijriDisplay)}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between p-3 rounded-xl bg-accent/10 border border-accent/20">
               <span className="text-xs font-semibold text-accent uppercase">Daily Progress</span>
-              <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                {dayDetail?.completion ?? 0}%
-              </span>
+              <div className="flex items-center gap-2">
+                {dayDetail?.dailyRecord?.isSubmitted && (
+                  <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] gap-1">
+                    <BookmarkCheck className="h-3 w-3" /> Submitted
+                  </Badge>
+                )}
+                <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                  {dayDetail?.completion ?? 0}%
+                </span>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -300,6 +328,20 @@ export default function HistoryPage() {
                 )}
               </div>
             )}
+
+            <Button
+              type="button"
+              onClick={() => {
+                if (selectedDayDate) {
+                  navigate('/dashboard');
+                  setSelectedDayDate(null);
+                }
+              }}
+              className="w-full text-xs gap-1.5 mt-2"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              <span>Open in Daily Journal</span>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -309,7 +351,7 @@ export default function HistoryPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Habit Record</DialogTitle>
-            <DialogDescription>Update notes or logged duration for this past entry.</DialogDescription>
+            <DialogDescription>Update notes or logged duration for this entry.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
@@ -339,7 +381,7 @@ export default function HistoryPage() {
             </div>
 
             <Button
-              className="w-full bg-primary text-primary-foreground"
+              className="w-full bg-primary text-primary-foreground text-xs"
               onClick={() =>
                 editingRecord &&
                 updateMutation.mutate({
