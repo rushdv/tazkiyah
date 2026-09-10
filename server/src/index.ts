@@ -16,20 +16,28 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: config.cors.origin,
+    origin: (origin, callback) => {
+      if (!origin || config.env === 'development' || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        callback(null, true);
+      } else {
+        callback(null, config.cors.origin);
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }),
 );
 
-app.use(
-  rateLimit({
-    windowMs: config.rateLimit.windowMs,
-    max: config.rateLimit.max,
-    message: { success: false, message: 'Too many requests, please try again later.' },
-  }),
-);
+if (config.env === 'production') {
+  app.use(
+    rateLimit({
+      windowMs: config.rateLimit.windowMs,
+      max: config.rateLimit.max,
+      message: { success: false, message: 'Too many requests, please try again later.' },
+    }),
+  );
+}
 
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10kb' }));
