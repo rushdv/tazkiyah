@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Play, Pause, RotateCcw, Plus, Sparkles, Sunrise, Sunset, BookOpen, Dumbbell, GraduationCap, Clock } from 'lucide-react';
+import { Check, Play, Pause, RotateCcw, Plus, Minus, Sparkles, Sunrise, Sunset, BookOpen, Dumbbell, GraduationCap, Clock } from 'lucide-react';
 import { cn, formatTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,30 +48,37 @@ interface HabitCardProps {
     durationMinutes?: number | null;
     actualCount?: number | null;
   }) => void;
-  isUpdating: boolean;
 }
 
-export function HabitCard({ date, habit, onUpdate, isUpdating }: HabitCardProps) {
+export function HabitCard({ date, habit, onUpdate }: HabitCardProps) {
   const cardDate = date || new Date().toISOString().split('T')[0];
   const targetMinutes = habit.effectiveTargetMinutes || habit.targetMinutes || 30;
+  const targetCount = habit.effectiveTargetCount || habit.targetCount || 5;
+
   const serverDuration = habit.record?.durationMinutes || 0;
+  const serverCount = habit.record?.actualCount || 0;
   const serverStatus = habit.record?.status || 'pending';
 
-  // Optimistic local state for immediate feedback
+  // Optimistic local state
   const [optimisticDuration, setOptimisticDuration] = useState<number | null>(null);
+  const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
   const [optimisticStatus, setOptimisticStatus] = useState<HabitStatus | null>(null);
 
   useEffect(() => {
     setOptimisticDuration(null);
+    setOptimisticCount(null);
     setOptimisticStatus(null);
-  }, [habit.record?.durationMinutes, habit.record?.status]);
+  }, [habit.record?.durationMinutes, habit.record?.actualCount, habit.record?.status]);
 
   const activeDuration = optimisticDuration ?? serverDuration;
+  const activeCount = optimisticCount ?? serverCount;
   const activeStatus = optimisticStatus ?? serverStatus;
 
   const isCompleted = activeStatus === 'completed';
   const isSkipped = activeStatus === 'skipped';
-  const isInProgress = activeStatus === 'in_progress' || (activeDuration > 0 && !isCompleted && !isSkipped);
+  const isInProgress = activeStatus === 'in_progress' ||
+    (habit.type === 'duration' && activeDuration > 0 && !isCompleted && !isSkipped) ||
+    (habit.type === 'count' && activeCount > 0 && !isCompleted && !isSkipped);
 
   // Live Timer State
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -136,6 +143,19 @@ export function HabitCard({ date, habit, onUpdate, isUpdating }: HabitCardProps)
     setCustomDurationInput('');
   }
 
+  function handleUpdateCount(delta: number) {
+    const newCount = Math.max(0, activeCount + delta);
+    const newStatus: HabitStatus = newCount >= targetCount ? 'completed' : newCount > 0 ? 'in_progress' : 'pending';
+    setOptimisticCount(newCount);
+    setOptimisticStatus(newStatus);
+    onUpdate({
+      habitId: habit.id,
+      date: cardDate,
+      status: newStatus,
+      actualCount: newCount,
+    });
+  }
+
   function handleToggleBinary() {
     const newStatus: HabitStatus = isCompleted ? 'pending' : 'completed';
     setOptimisticStatus(newStatus);
@@ -148,6 +168,8 @@ export function HabitCard({ date, habit, onUpdate, isUpdating }: HabitCardProps)
 
   const durationPercentage = habit.type === 'duration'
     ? Math.min(100, Math.round((activeDuration / targetMinutes) * 100))
+    : habit.type === 'count'
+    ? Math.min(100, Math.round((activeCount / targetCount) * 100))
     : isCompleted ? 100 : 0;
 
   return (
@@ -201,7 +223,7 @@ export function HabitCard({ date, habit, onUpdate, isUpdating }: HabitCardProps)
             </div>
             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{habit.description}</p>
 
-            {/* Target and Duration readout */}
+            {/* Readout */}
             {habit.type === 'duration' && (
               <div className="flex items-center gap-3 mt-2 text-xs font-medium text-muted-foreground">
                 <span className={cn(isCompleted ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-foreground')}>
@@ -213,6 +235,14 @@ export function HabitCard({ date, habit, onUpdate, isUpdating }: HabitCardProps)
                     {formatTime(habit.record.completedAt)}
                   </span>
                 )}
+              </div>
+            )}
+
+            {habit.type === 'count' && (
+              <div className="flex items-center gap-3 mt-2 text-xs font-medium text-muted-foreground">
+                <span className={cn(isCompleted ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-foreground')}>
+                  {activeCount} / {targetCount} {habit.unit || 'times'}
+                </span>
               </div>
             )}
           </div>
@@ -232,6 +262,32 @@ export function HabitCard({ date, habit, onUpdate, isUpdating }: HabitCardProps)
           >
             {isCompleted ? 'Completed ✓' : 'Mark Done'}
           </Button>
+        )}
+
+        {/* Action Controls for Count Habits */}
+        {habit.type === 'count' && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              onClick={() => handleUpdateCount(-1)}
+              disabled={activeCount <= 0}
+              className="h-8 w-8"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </Button>
+            <span className="text-sm font-semibold min-w-8 text-center">{activeCount}</span>
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              onClick={() => handleUpdateCount(1)}
+              className="h-8 w-8 hover:bg-emerald-500/10 hover:border-emerald-500/40"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         )}
       </div>
 
@@ -326,7 +382,7 @@ export function HabitCard({ date, habit, onUpdate, isUpdating }: HabitCardProps)
                 +15m
               </Button>
 
-              {/* Direct Duration Input Toggle */}
+              {/* Direct Duration Input */}
               <div className="flex items-center gap-1 ml-1">
                 <Input
                   type="number"
