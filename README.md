@@ -58,10 +58,11 @@ Tazkiyah treats daily self-accountability (*Muhasabah*) with explicit distinctio
 
 ### Backend
 - Node.js, Express.js, TypeScript
-- Prisma ORM, PostgreSQL
-- JWT Authentication, bcrypt
-- Zod Validation, Helmet, CORS
-- Rate Limiter, Morgan Logger
+- Prisma ORM (SQLite for local dev, PostgreSQL for production)
+- JWT Authentication (Access Token + Refresh Token Rotation)
+- Pure JS `bcryptjs` password hashing (zero native addon load failures)
+- Zod Schema Validation, Helmet security headers, CORS origin protection
+- Express Rate Limiting & Morgan Logging
 
 ### DevOps
 - Docker & Docker Compose
