@@ -27,6 +27,19 @@ Tazkiyah is a modern Islamic habit tracker that helps Muslims consistently maint
 
 ---
 
+## Core Product Concepts
+
+### 1. Daily Submission Workflow
+Tazkiyah treats daily self-accountability (*Muhasabah*) with explicit distinction between transient edits and finalized submissions:
+- **Progress Saved**: As you complete practices throughout the day, habit logs are updated in real-time.
+- **Day Submitted**: At the end of the day, users click **"Submit Day"** with an optional Muhasabah reflection note. Once submitted, `isSubmitted: true` and `submittedAt` timestamp are recorded for immutable historical tracking.
+
+### 2. Um al-Qura Hijri Date Integration
+- Native calculation using `Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', ...)` without external heavy dependencies.
+- Displays Hijri dates across Dashboard headers, Calendar day cells, History list cards, and PDF report headers.
+
+---
+
 ## Tech Stack
  
 ### Frontend
