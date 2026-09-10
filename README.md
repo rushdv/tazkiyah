@@ -271,22 +271,19 @@ docker-compose -f docker/docker-compose.prod.yml up -d
 
 ---
 
-## Future Features
+## Production Roadmap
 
-- Dhikr Counter
-- Tasbeeh Counter
-- Prayer Tracker
-- Quran Reading Progress
-- Memorization Tracker
-- Daily Goals
-- Journal & Islamic Notes
-- Ramadan Mode
-- Charity Tracker
-- Fasting Tracker
-- Multi-language Support
-- Push Notifications
-- PWA
-- Mobile App
+- [x] Progressive Web App (PWA) with service worker offline caching
+- [x] Multi-page A4 PDF export with daily journal embeds
+- [x] Native Um al-Qura Hijri calendar system
+- [x] Daily self-accountability submission workflow
+- [ ] Dhikr & Digital Tasbeeh Counter
+- [ ] Daily Prayer Timings & Sunnah Tracker
+- [ ] Quran Surah & Ayah Memorization Tracker
+- [ ] Ramadan Special Mode & Fasting Journal
+- [ ] Sadaqah & Voluntary Charity Log
+- [ ] Multi-language Support (Arabic, Bengali, Urdu)
+- [ ] Native Push Notification Reminders
 
 ---
 
