@@ -36,7 +36,11 @@ Tazkiyah treats daily self-accountability (*Muhasabah*) with explicit distinctio
 
 ### 2. Um al-Qura Hijri Date Integration
 - Native calculation using `Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', ...)` without external heavy dependencies.
-- Displays Hijri dates across Dashboard headers, Calendar day cells, History list cards, and PDF report headers.
+### 3. Multi-page Structured PDF Progress Reports
+- **Page 1 (Cover Page)**: Overall consistency score, submitted days count, streak metrics, and total spiritual/learning hours.
+- **Page 2 (Practice Breakdown)**: Completion table by practice type, total duration/count, and highest consistency habit.
+- **Pages 3-5 (Day-by-Day Journal)**: Complete daily record snapshots including Gregorian & Hijri dates, submission status, completion scores, practice breakdowns, and Muhasabah reflection notes.
+- **CSS 4 Sanitization Engine**: Intercepts DOM rendering inside `html2canvas` `onclone` to convert modern color formats (`oklch`, `oklab`, `lab`) to standard `#hex`/`rgb` colors for crash-free export.
 
 ---
 
