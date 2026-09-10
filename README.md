@@ -8,6 +8,9 @@ Tazkiyah is a modern Islamic habit tracker that helps Muslims consistently maint
 
 ## Features
 
+- ✅ **Um al-Qura Hijri Calendar** native integration & display
+- ✅ **Daily Submission Workflow** ("Progress Saved" vs "Day Submitted")
+- ✅ **Structured 5-Page A4 PDF Reports** with complete day-by-day journals
 - ✅ **Morning & Evening Azkar** tracking
 - ✅ **Dua** completion tracking
 - ✅ **Quran** reading (30 min goal)
@@ -15,12 +18,11 @@ Tazkiyah is a modern Islamic habit tracker that helps Muslims consistently maint
 - ✅ **Islamic Learning** (30 min goal)
 - ✅ **Daily Dashboard** with progress rings and inspiration
 - ✅ **Monthly Calendar** with day-by-day completion
-- ✅ **Weekly Reports** with export capability
 - ✅ **Monthly Analytics** with charts and trends
 - ✅ **Streak Tracking** (current and longest)
 - ✅ **Achievement System** (7, 30, 100 day streaks)
 - ✅ **History** with search, filter, and edit
-- ✅ **Dark Mode** first design
+- ✅ **Dark Mode** editorial design
 - ✅ **Responsive** mobile-friendly layout
 
 ---
