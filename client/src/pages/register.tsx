@@ -7,11 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
 
 export default function RegisterPage() {
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
     register,
@@ -22,10 +24,14 @@ export default function RegisterPage() {
   });
 
   async function onSubmit(data: RegisterInput) {
+    setErrorMessage(null);
     try {
       await registerUser(data);
       navigate('/dashboard');
-    } catch {}
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Registration failed. Please try again.';
+      setErrorMessage(msg);
+    }
   }
 
   return (
@@ -39,6 +45,13 @@ export default function RegisterPage() {
           <CardDescription>Start your journey of spiritual growth</CardDescription>
         </CardHeader>
         <CardContent>
+          {errorMessage && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-xs text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
@@ -53,6 +66,9 @@ export default function RegisterPage() {
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" placeholder="••••••••" {...register('password')} />
+              <p className="text-[11px] text-muted-foreground">
+                Must be at least 8 characters with 1 uppercase, 1 lowercase & 1 number.
+              </p>
               {errors.password && (
                 <p className="text-xs text-destructive">{errors.password.message}</p>
               )}
