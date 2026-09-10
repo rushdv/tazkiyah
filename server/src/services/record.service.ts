@@ -3,20 +3,27 @@ import { streakRepository } from '../repositories/streak.repository';
 import { habitRepository } from '../repositories/habit.repository';
 import { reflectionRepository } from '../repositories/reflection.repository';
 import { userHabitSettingRepository } from '../repositories/userHabitSetting.repository';
+import { dailyRecordRepository } from '../repositories/dailyRecord.repository';
 import { AppError } from '../utils/response';
-import { HabitRecordCreateInput, HabitRecordUpdateInput } from '@tazkiyah/shared';
+import { HabitRecordCreateInput, HabitRecordUpdateInput, getDateInfo, formatDateStr } from '@tazkiyah/shared';
 import { getDailyMotivation } from '../utils/motivation';
 import { achievementService } from './achievement.service';
 
 export const recordService = {
   async getToday(userId: string) {
-    const dateStr = new Date().toISOString().split('T')[0];
-    const today = new Date(dateStr + 'T00:00:00Z');
+    const dateStr = formatDateStr(new Date());
+    return this.getDayDetail(userId, dateStr);
+  },
+
+  async getDayDetail(userId: string, dateStr: string) {
+    const date = new Date(dateStr + 'T00:00:00Z');
+    const dateInfo = getDateInfo(dateStr);
 
     const habits = await habitRepository.findAll();
-    const records = await recordRepository.findByUserAndDate(userId, today);
+    const records = await recordRepository.findByUserAndDate(userId, date);
     const userHabitSettings = await userHabitSettingRepository.findByUser(userId);
-    const reflection = await reflectionRepository.findByUserAndDate(userId, today);
+    const reflection = await reflectionRepository.findByUserAndDate(userId, date);
+    const dbDailyRecord = await dailyRecordRepository.findByUserAndDate(userId, date);
 
     const recordsMap = new Map(records.map((r) => [r.habitId, r]));
     const settingsMap = new Map(userHabitSettings.map((s) => [s.habitId, s]));
@@ -51,7 +58,6 @@ export const recordService = {
       .filter((h) => h.enabled)
       .sort((a, b) => a.sortOrder - b.sortOrder);
 
-    // Transparent Daily Progress calculation
     let totalProgress = 0;
     habitsWithRecords.forEach((h) => {
       if (!h.record) return;
@@ -60,11 +66,9 @@ export const recordService = {
         totalProgress += 100;
       } else if (h.record.status === 'in_progress') {
         if (h.type === 'duration' && h.effectiveTargetMinutes && h.record.durationMinutes) {
-          const pct = Math.min(100, Math.round((h.record.durationMinutes / h.effectiveTargetMinutes) * 100));
-          totalProgress += pct;
+          totalProgress += Math.min(100, Math.round((h.record.durationMinutes / h.effectiveTargetMinutes) * 100));
         } else if (h.type === 'count' && h.effectiveTargetCount && h.record.actualCount) {
-          const pct = Math.min(100, Math.round((h.record.actualCount / h.effectiveTargetCount) * 100));
-          totalProgress += pct;
+          totalProgress += Math.min(100, Math.round((h.record.actualCount / h.effectiveTargetCount) * 100));
         }
       }
     });
@@ -76,10 +80,26 @@ export const recordService = {
     const streaks = await streakRepository.get(userId);
     const motivation = getDailyMotivation();
 
+    const dailyRecord = dbDailyRecord ? {
+      id: dbDailyRecord.id,
+      userId: dbDailyRecord.userId,
+      date: dateStr,
+      isSubmitted: dbDailyRecord.isSubmitted,
+      submittedAt: dbDailyRecord.submittedAt ? dbDailyRecord.submittedAt.toISOString() : null,
+      completionPercentage: dbDailyRecord.completionPercentage || completion,
+      overallNote: dbDailyRecord.overallNote,
+      createdAt: dbDailyRecord.createdAt.toISOString(),
+      updatedAt: dbDailyRecord.updatedAt.toISOString(),
+    } : null;
+
     return {
-      date: today.toISOString().split('T')[0],
+      date: dateStr,
+      dayName: dateInfo.dayName,
+      gregorianDisplay: dateInfo.gregorianDisplay,
+      hijriDisplay: dateInfo.hijriDisplay,
       habits: habitsWithRecords,
       completion,
+      dailyRecord,
       motivation,
       streaks: streaks || { currentStreak: 0, longestStreak: 0, lastActivityDate: null },
       reflection,
@@ -87,7 +107,8 @@ export const recordService = {
   },
 
   async upsertRecord(userId: string, input: HabitRecordCreateInput) {
-    const date = new Date(input.date + 'T00:00:00Z');
+    const dateStr = input.date;
+    const date = new Date(dateStr + 'T00:00:00Z');
 
     const habit = await habitRepository.findBySlug(input.habitId) || null;
     const habitId = habit ? habit.id : input.habitId;
@@ -103,6 +124,15 @@ export const recordService = {
       userId,
       habitId,
     } as any);
+
+    // Keep DailyRecord completionPercentage updated if present
+    const dayDetail = await this.getDayDetail(userId, dateStr);
+    const existingDaily = await dailyRecordRepository.findByUserAndDate(userId, date);
+    if (existingDaily) {
+      await dailyRecordRepository.upsert(userId, date, {
+        completionPercentage: dayDetail.completion,
+      });
+    }
 
     await this.updateStreaks(userId, date);
     await achievementService.checkAndUnlockAchievements(userId);
@@ -126,74 +156,45 @@ export const recordService = {
 
     const updated = await recordRepository.update(recordId, updateData as any);
 
+    const dateStr = formatDateStr(existing.date);
+    const dayDetail = await this.getDayDetail(userId, dateStr);
+    const existingDaily = await dailyRecordRepository.findByUserAndDate(userId, existing.date);
+    if (existingDaily) {
+      await dailyRecordRepository.upsert(userId, existing.date, {
+        completionPercentage: dayDetail.completion,
+      });
+    }
+
     await this.updateStreaks(userId, existing.date);
     await achievementService.checkAndUnlockAchievements(userId);
 
     return updated;
   },
 
-  async getDayDetail(userId: string, dateStr: string) {
+  async submitDay(userId: string, dateStr: string, overallNote?: string) {
     const date = new Date(dateStr + 'T00:00:00Z');
-    const habits = await habitRepository.findAll();
-    const records = await recordRepository.findByUserAndDate(userId, date);
-    const userHabitSettings = await userHabitSettingRepository.findByUser(userId);
-    const reflection = await reflectionRepository.findByUserAndDate(userId, date);
+    const dayDetail = await this.getDayDetail(userId, dateStr);
 
-    const recordsMap = new Map(records.map((r) => [r.habitId, r]));
-    const settingsMap = new Map(userHabitSettings.map((s) => [s.habitId, s]));
-
-    const habitsWithRecords = habits.map((habit) => {
-      const userSetting = settingsMap.get(habit.id);
-      const record = recordsMap.get(habit.id) || null;
-
-      const enabled = userSetting ? userSetting.enabled : true;
-      const effectiveTargetMinutes = userSetting?.customTargetMinutes ?? habit.targetMinutes ?? null;
-      const effectiveTargetCount = userSetting?.customTargetCount ?? habit.targetCount ?? null;
-
-      return {
-        id: habit.id,
-        slug: habit.slug,
-        label: habit.label,
-        icon: habit.icon,
-        description: habit.description,
-        type: habit.type as 'binary' | 'duration' | 'count' | 'custom',
-        targetMinutes: habit.targetMinutes,
-        targetCount: habit.targetCount,
-        unit: habit.unit,
-        sortOrder: habit.sortOrder,
-        enabled,
-        effectiveTargetMinutes,
-        effectiveTargetCount,
-        record,
-      };
+    const submitted = await dailyRecordRepository.upsert(userId, date, {
+      isSubmitted: true,
+      submittedAt: new Date(),
+      completionPercentage: dayDetail.completion,
+      overallNote: overallNote || null,
     });
 
-    let totalProgress = 0;
-    const activeHabits = habitsWithRecords.filter((h) => h.enabled);
-    activeHabits.forEach((h) => {
-      if (!h.record) return;
-      if (h.record.status === 'completed') {
-        totalProgress += 100;
-      } else if (h.record.status === 'in_progress') {
-        if (h.type === 'duration' && h.effectiveTargetMinutes && h.record.durationMinutes) {
-          totalProgress += Math.min(100, Math.round((h.record.durationMinutes / h.effectiveTargetMinutes) * 100));
-        } else if (h.type === 'count' && h.effectiveTargetCount && h.record.actualCount) {
-          totalProgress += Math.min(100, Math.round((h.record.actualCount / h.effectiveTargetCount) * 100));
-        }
-      }
-    });
-
-    const completion = activeHabits.length > 0 ? Math.round(totalProgress / activeHabits.length) : 0;
-    const streaks = await streakRepository.get(userId);
-    const motivation = getDailyMotivation();
+    await this.updateStreaks(userId, date);
+    await achievementService.checkAndUnlockAchievements(userId);
 
     return {
+      id: submitted.id,
+      userId: submitted.userId,
       date: dateStr,
-      habits: habitsWithRecords,
-      completion,
-      motivation,
-      streaks: streaks || { currentStreak: 0, longestStreak: 0, lastActivityDate: null },
-      reflection,
+      isSubmitted: submitted.isSubmitted,
+      submittedAt: submitted.submittedAt ? submitted.submittedAt.toISOString() : null,
+      completionPercentage: submitted.completionPercentage,
+      overallNote: submitted.overallNote,
+      createdAt: submitted.createdAt.toISOString(),
+      updatedAt: submitted.updatedAt.toISOString(),
     };
   },
 
@@ -223,6 +224,15 @@ export const recordService = {
     const currentRecords = await recordRepository.getMonthlyData(userId, year, month);
     const habits = await habitRepository.findAll();
 
+    const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+    const totalDaysInMonth = new Date(year, month, 0).getDate();
+    const endDate = new Date(Date.UTC(year, month - 1, totalDaysInMonth, 23, 59, 59));
+
+    const dailyRecordsList = await dailyRecordRepository.findRangeByUser(userId, startDate, endDate);
+    const dailyRecordsMap = new Map(
+      dailyRecordsList.map((dr) => [formatDateStr(dr.date), dr])
+    );
+
     // Fetch previous month records for Month-over-Month comparison
     const prevMonth = month === 1 ? 12 : month - 1;
     const prevYear = month === 1 ? year - 1 : year;
@@ -239,7 +249,7 @@ export const recordService = {
     let learningTotalMinutes = 0;
 
     currentRecords.forEach((r) => {
-      const dateStr = r.date.toISOString().split('T')[0];
+      const dateStr = formatDateStr(r.date);
       if (!dailyMap.has(dateStr)) {
         dailyMap.set(dateStr, { total: habits.length, completed: 0, progressSum: 0 });
       }
@@ -266,14 +276,29 @@ export const recordService = {
       }
     });
 
-    const dailyData = Array.from(dailyMap.entries())
-      .map(([date, data]) => ({
-        date,
-        completion: Math.round(data.progressSum / habits.length),
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    const dailyData = Array.from({ length: totalDaysInMonth }, (_, idx) => {
+      const dayNum = idx + 1;
+      const mStr = String(month).padStart(2, '0');
+      const dStr = String(dayNum).padStart(2, '0');
+      const dateStr = `${year}-${mStr}-${dStr}`;
 
-    const totalDaysInMonth = new Date(year, month, 0).getDate();
+      const dateInfo = getDateInfo(dateStr);
+      const existingRecord = dailyMap.get(dateStr);
+      const dr = dailyRecordsMap.get(dateStr);
+
+      const completion = dr?.completionPercentage ?? (existingRecord ? Math.round(existingRecord.progressSum / habits.length) : 0);
+
+      return {
+        date: dateStr,
+        dayName: dateInfo.dayName,
+        gregorianDisplay: dateInfo.gregorianDisplay,
+        hijriDisplay: dateInfo.hijriDisplay,
+        completion,
+        isSubmitted: dr?.isSubmitted ?? false,
+        submittedAt: dr?.submittedAt ? dr.submittedAt.toISOString() : null,
+      };
+    });
+
     const habitBreakdown = habits.map((h) => {
       const count = habitCounts.get(h.id);
       const completedDays = count?.completed || 0;
@@ -314,7 +339,7 @@ export const recordService = {
     const prevHabitCompletedMap = new Map<string, number>();
 
     previousRecords.forEach((r) => {
-      prevDaySet.add(r.date.toISOString().split('T')[0]);
+      prevDaySet.add(formatDateStr(r.date));
       if (r.status === 'completed') {
         prevCompleted++;
         prevHabitCompletedMap.set(r.habitId, (prevHabitCompletedMap.get(r.habitId) || 0) + 1);
@@ -395,7 +420,7 @@ export const recordService = {
     const daySet = new Set<string>();
 
     records.forEach((r) => {
-      const dateStr = r.date.toISOString().split('T')[0];
+      const dateStr = formatDateStr(r.date);
       daySet.add(dateStr);
 
       if (!dailyCompletion.has(dateStr)) {
@@ -466,7 +491,6 @@ export const recordService = {
     const habits = await habitRepository.findAll();
     const records = await recordRepository.findByUserAndDate(userId, activityDate);
 
-    // Duration and binary completion check
     const completedCount = records.filter((r) => r.status === 'completed').length;
 
     if (habits.length > 0 && completedCount < Math.ceil(habits.length * 0.5)) {
