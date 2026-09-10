@@ -197,17 +197,27 @@ Full API documentation is available at `/api-docs` when the server is running.
 |--------|----------|-------------|
 | GET | `/api/v1/habits` | Get all habits |
 
-### Record Endpoints
+### Record & Submission Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/v1/records/today` | Get today's dashboard data |
 | POST | `/api/v1/records` | Create/update habit record |
+| POST | `/api/v1/records/submit-day` | Submit day with optional reflection note |
 | PATCH | `/api/v1/records/:id` | Update habit record |
 | GET | `/api/v1/records/history` | Get paginated history |
-| GET | `/api/v1/records/day/:date` | Get day details |
+| GET | `/api/v1/records/day/:date` | Get day details with submission status |
 | GET | `/api/v1/records/weekly-report` | Get weekly report |
 | GET | `/api/v1/records/analytics/:year/:month` | Get monthly analytics |
+
+### Report Snapshots & PDF Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/reports` | Get user report snapshots |
+| POST | `/api/v1/reports/generate` | Generate progress report with embedded journals |
+| GET | `/api/v1/reports/:id` | Get report snapshot details |
+| DELETE | `/api/v1/reports/:id` | Delete report snapshot |
 
 ---
 
