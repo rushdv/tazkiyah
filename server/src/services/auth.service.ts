@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { userRepository } from '../repositories/user.repository';
 import { userHabitSettingRepository } from '../repositories/userHabitSetting.repository';
