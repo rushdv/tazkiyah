@@ -146,7 +146,15 @@ export interface MonthlyAnalytics {
   learningTotalMinutes: number;
   bestHabit: { slug: string; label: string; completion: number } | null;
   mostConsistentWeek: { week: number; completion: number } | null;
-  dailyData: { date: string; completion: number }[];
+  dailyData: {
+    date: string;
+    dayName?: string;
+    gregorianDisplay?: string;
+    hijriDisplay?: string;
+    completion: number;
+    isSubmitted?: boolean;
+    submittedAt?: string | null;
+  }[];
   habitBreakdown: { habit: Habit; completion: number; completedDays: number; totalDays: number }[];
   weeklyTrends: { week: number; completion: number }[];
   comparison?: MonthOverMonthComparison;
@@ -214,8 +222,23 @@ export interface AuthResponse {
   tokens: AuthTokens;
 }
 
+export interface DailyRecord {
+  id: string;
+  userId: string;
+  date: string;
+  isSubmitted: boolean;
+  submittedAt: string | null;
+  completionPercentage: number;
+  overallNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DashboardData {
   date: string;
+  dayName: string;
+  gregorianDisplay: string;
+  hijriDisplay: string;
   habits: (Habit & {
     enabled: boolean;
     effectiveTargetMinutes: number | null;
@@ -223,6 +246,7 @@ export interface DashboardData {
     record: HabitRecord | null;
   })[];
   completion: number;
+  dailyRecord: DailyRecord | null;
   motivation: MotivationCard | null;
   streaks: Streak;
   reflection: Reflection | null;
@@ -237,6 +261,9 @@ export interface MotivationCard {
 
 export interface DayDetail {
   date: string;
+  dayName: string;
+  gregorianDisplay: string;
+  hijriDisplay: string;
   habits: (Habit & {
     enabled: boolean;
     effectiveTargetMinutes: number | null;
@@ -244,5 +271,8 @@ export interface DayDetail {
     record: HabitRecord | null;
   })[];
   completion: number;
+  dailyRecord: DailyRecord | null;
+  motivation: MotivationCard | null;
+  streaks: Streak;
   reflection: Reflection | null;
 }
