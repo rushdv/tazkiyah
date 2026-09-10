@@ -7,17 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -25,10 +27,20 @@ export default function LoginPage() {
   });
 
   async function onSubmit(data: LoginInput) {
+    setErrorMessage(null);
     try {
       await login(data);
       navigate('/dashboard');
-    } catch {}
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Login failed. Please check your credentials.';
+      setErrorMessage(msg);
+    }
+  }
+
+  function fillDemoUser() {
+    setValue('email', 'testuser@example.com');
+    setValue('password', 'Password123!');
+    setErrorMessage(null);
   }
 
   return (
@@ -42,6 +54,13 @@ export default function LoginPage() {
           <CardDescription>Sign in to continue your journey</CardDescription>
         </CardHeader>
         <CardContent>
+          {errorMessage && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-xs text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -79,6 +98,14 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Sign In
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full text-xs"
+              onClick={fillDemoUser}
+            >
+              Fill Demo Credentials
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
