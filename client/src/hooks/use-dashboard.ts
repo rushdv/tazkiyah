@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import api from '@/lib/api';
-import type { ApiResponse, DashboardData, HabitRecord, HabitRecordCreateInput, ReflectionInput, Reflection } from '@tazkiyah/shared';
+import type { ApiResponse, DashboardData, HabitRecord, HabitRecordCreateInput, ReflectionInput, Reflection, DailyRecord } from '@tazkiyah/shared';
 
 export function useDashboard(selectedDate?: string) {
   const queryClient = useQueryClient();
@@ -50,6 +50,23 @@ export function useDashboard(selectedDate?: string) {
     },
   });
 
+  const submitDayMutation = useMutation({
+    mutationFn: async ({ date, overallNote }: { date: string; overallNote?: string }) => {
+      const { data } = await api.post<ApiResponse<DailyRecord>>('/records/submit-day', { date, overallNote });
+      return data.data!;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['records'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['history'] });
+      toast.success(`Daily record submitted for ${result.date}`);
+    },
+    onError: () => {
+      toast.error('Failed to submit daily record');
+    },
+  });
+
   return {
     dashboard: dashboardQuery.data,
     isLoading: dashboardQuery.isLoading,
@@ -58,5 +75,7 @@ export function useDashboard(selectedDate?: string) {
     isUpdating: upsertHabitMutation.isPending,
     saveReflection: upsertReflectionMutation.mutate,
     isSavingReflection: upsertReflectionMutation.isPending,
+    submitDay: submitDayMutation.mutate,
+    isSubmittingDay: submitDayMutation.isPending,
   };
 }
