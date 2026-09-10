@@ -290,3 +290,7 @@ docker-compose -f docker/docker-compose.prod.yml up -d
 ## License
 
 MIT
+
+---
+
+*Tazkiyah v1.0 Production Release — Built for Spiritual Growth & Daily Consistency.*
