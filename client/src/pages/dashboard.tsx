@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
-import { Flame, Quote, BookHeart, Info, HeartHandshake, ChevronLeft, ChevronRight, Calendar, RotateCcw } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { cn, formatTime } from '@/lib/utils';
+import { Flame, Quote, BookHeart, Info, HeartHandshake, ChevronLeft, ChevronRight, Calendar, RotateCcw, CheckCircle2, Send, BookmarkCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { format, subDays, addDays, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
@@ -26,11 +27,22 @@ export default function DashboardPage() {
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
-  const { dashboard, isLoading, updateHabit, isUpdating, saveReflection, isSavingReflection } = useDashboard(selectedDate);
+  const {
+    dashboard,
+    isLoading,
+    updateHabit,
+    saveReflection,
+    isSavingReflection,
+    submitDay,
+    isSubmittingDay,
+  } = useDashboard(selectedDate);
 
   const [selectedMood, setSelectedMood] = useState<'excellent' | 'good' | 'okay' | 'difficult' | null>(null);
   const [reflectionNotes, setReflectionNotes] = useState('');
   const [reflectionImprovement, setReflectionImprovement] = useState('');
+
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [overallNoteInput, setOverallNoteInput] = useState('');
 
   const isToday = selectedDate === todayStr;
 
@@ -44,7 +56,13 @@ export default function DashboardPage() {
       setReflectionNotes('');
       setReflectionImprovement('');
     }
-  }, [dashboard?.reflection, selectedDate]);
+
+    if (dashboard?.dailyRecord) {
+      setOverallNoteInput(dashboard.dailyRecord.overallNote || '');
+    } else {
+      setOverallNoteInput('');
+    }
+  }, [dashboard?.reflection, dashboard?.dailyRecord, selectedDate]);
 
   function handlePrevDay() {
     const current = parseISO(selectedDate);
@@ -67,6 +85,17 @@ export default function DashboardPage() {
     });
   }
 
+  function handleConfirmSubmitDay() {
+    submitDay(
+      { date: selectedDate, overallNote: overallNoteInput || undefined },
+      {
+        onSuccess: () => {
+          setIsSubmitModalOpen(false);
+        },
+      }
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -86,7 +115,8 @@ export default function DashboardPage() {
   if (!dashboard) return null;
 
   const completedHabitsCount = dashboard.habits.filter((h) => h.record?.status === 'completed').length;
-  const displayDateObj = parseISO(selectedDate + 'T00:00:00Z');
+  const isSubmitted = dashboard.dailyRecord?.isSubmitted ?? false;
+  const submittedAt = dashboard.dailyRecord?.submittedAt;
 
   return (
     <motion.div
@@ -95,24 +125,31 @@ export default function DashboardPage() {
       className="space-y-8 pb-12"
     >
       {/* Header Greeting & Date Selector Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/60 pb-6">
         <div>
           <span className="text-xs font-semibold tracking-wider text-accent uppercase">
             As-salamu alaykum, {user?.name || 'Friend'}
           </span>
-          <div className="flex items-center gap-3 mt-0.5">
+          <div className="flex items-center gap-3 mt-1">
             <h1 className="text-3xl font-bold tracking-tight">
-              {isToday ? "Today's Journey" : 'Daily Journey'}
+              {isToday ? "Today's Journey" : 'Daily Record'}
             </h1>
-            {!isToday && (
-              <Badge variant="outline" className="border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 text-xs">
-                Past Date Record
+            {isSubmitted ? (
+              <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs px-2.5 py-0.5 gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Submitted
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="border-border text-muted-foreground text-xs px-2.5 py-0.5">
+                Progress Saved
               </Badge>
             )}
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {format(displayDateObj, 'EEEE, MMMM d, yyyy')}
-          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground font-medium">
+            <span>{dashboard.gregorianDisplay}</span>
+            <span>•</span>
+            <span className="text-accent font-semibold">{dashboard.hijriDisplay}</span>
+          </div>
         </div>
 
         {/* Date Selector Navigation Controls */}
@@ -177,11 +214,49 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         {/* Habits List */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          {/* Daily Submission Banner */}
+          <Card className={cn(
+            'border p-4 rounded-xl transition-all',
+            isSubmitted
+              ? 'border-emerald-500/40 bg-emerald-950/10 dark:bg-emerald-950/20'
+              : 'border-accent/30 bg-accent/5'
+          )}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <BookmarkCheck className={cn('h-5 w-5', isSubmitted ? 'text-emerald-500' : 'text-accent')} />
+                  <h3 className="font-semibold text-base tracking-tight">
+                    {isSubmitted ? 'Daily Record Submitted' : 'Submit Today’s Record'}
+                  </h3>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {isSubmitted
+                    ? `Submitted at ${submittedAt ? formatTime(submittedAt) : 'end of day'} • ${completedHabitsCount} of ${dashboard.habits.length} practices completed (${dashboard.completion}%)`
+                    : `${completedHabitsCount} of ${dashboard.habits.length} practices completed (${dashboard.completion}%). Submit when ready.`}
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                onClick={() => setIsSubmitModalOpen(true)}
+                className={cn(
+                  'shrink-0 h-10 px-5 font-medium text-xs gap-2',
+                  isSubmitted
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    : 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                )}
+              >
+                <Send className="h-3.5 w-3.5" />
+                <span>{isSubmitted ? 'Update Submission' : 'Submit Record'}</span>
+              </Button>
+            </div>
+          </Card>
+
+          <div className="flex items-center justify-between pt-2">
             <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
-              <span>Active Habits</span>
+              <span>Daily 5 Practices</span>
               <span className="text-xs text-muted-foreground font-normal">
-                ({format(displayDateObj, 'MMM d')})
+                ({dashboard.dayName})
               </span>
             </h2>
             <span className="text-xs text-muted-foreground font-medium">
@@ -196,27 +271,26 @@ export default function DashboardPage() {
                 date={selectedDate}
                 habit={habit as any}
                 onUpdate={(input) => updateHabit(input as any)}
-                isUpdating={isUpdating}
               />
             ))}
           </div>
 
-          {/* End-of-day Reflection Box */}
+          {/* End-of-day Muhasabah Reflection Box */}
           <Card className="mt-8 border-accent/20 bg-accent/5">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <HeartHandshake className="h-5 w-5 text-accent" />
-                Reflection for {format(displayDateObj, 'MMMM d, yyyy')}
+                Muhasabah & Self-Reflection
               </CardTitle>
               <p className="text-xs text-muted-foreground">
-                Record your state of mind and reflections for this date.
+                Take a moment of quiet self-accountability for {dashboard.gregorianDisplay}.
               </p>
             </CardHeader>
 
             <CardContent className="space-y-4">
               {/* Mood Selection */}
               <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-2">How did this day feel?</label>
+                <label className="text-xs font-medium text-muted-foreground block mb-2">How did today feel spiritually & personally?</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {moodOptions.map((m) => (
                     <button
@@ -239,9 +313,9 @@ export default function DashboardPage() {
 
               {/* Reflection Notes */}
               <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground block">Reflection / What went well?</label>
+                <label className="text-xs font-medium text-muted-foreground block">What went well today? (Gratitude & Growth)</label>
                 <Textarea
-                  placeholder="Record your thoughts or gratitude..."
+                  placeholder="Record your blessings, focus, or good deeds..."
                   value={reflectionNotes}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setReflectionNotes(e.target.value)}
                   className="text-xs min-h-[60px] resize-none"
@@ -249,9 +323,9 @@ export default function DashboardPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground block">What would you like to improve?</label>
+                <label className="text-xs font-medium text-muted-foreground block">What can I improve tomorrow?</label>
                 <Textarea
-                  placeholder="Small step for future improvement..."
+                  placeholder="Small intentional steps for tomorrow..."
                   value={reflectionImprovement}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setReflectionImprovement(e.target.value)}
                   className="text-xs min-h-[60px] resize-none"
@@ -264,7 +338,7 @@ export default function DashboardPage() {
                 disabled={!selectedMood || isSavingReflection}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium"
               >
-                {isSavingReflection ? 'Saving...' : `Save Reflection for ${format(displayDateObj, 'MMM d')}`}
+                {isSavingReflection ? 'Saving...' : `Save Reflection for ${dashboard.gregorianDisplay}`}
               </Button>
             </CardContent>
           </Card>
@@ -285,11 +359,11 @@ export default function DashboardPage() {
             <CardContent className="flex flex-col items-center pt-2 pb-4">
               <ProgressRing progress={dashboard.completion} size={150} />
 
-              <div className="mt-4 p-3 rounded-lg bg-muted/40 border border-border/60 text-xs text-muted-foreground space-y-1">
+              <div className="mt-4 p-3 rounded-lg bg-muted/40 border border-border/60 text-xs text-muted-foreground space-y-1 w-full">
                 <div className="flex items-start gap-1.5">
                   <Info className="h-4 w-4 shrink-0 text-accent mt-0.5" />
                   <p>
-                    Consistency score for {format(displayDateObj, 'MMM d, yyyy')}. Measures habit completion based on target goals.
+                    Consistency score for {dashboard.gregorianDisplay}. Evaluated across all enabled 5 daily practices.
                   </p>
                 </div>
               </div>
@@ -306,7 +380,7 @@ export default function DashboardPage() {
                   ) : (
                     <Quote className="h-4 w-4 text-amber-500" />
                   )}
-                  Daily Reflection
+                  Spiritual Reminder
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -321,6 +395,70 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Submission Confirmation Modal */}
+      <Dialog open={isSubmitModalOpen} onOpenChange={setIsSubmitModalOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <BookmarkCheck className="h-5 w-5 text-emerald-600" />
+              Submit Daily Record
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Lock in your self-accountability record for <strong className="text-foreground">{dashboard.gregorianDisplay}</strong> ({dashboard.hijriDisplay}).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="p-3.5 rounded-xl bg-muted/40 border border-border/70 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Practices Completed:</span>
+                <span className="font-semibold text-foreground">{completedHabitsCount} of {dashboard.habits.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Daily Score:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{dashboard.completion}%</span>
+              </div>
+              {submittedAt && (
+                <div className="flex items-center justify-between border-t border-border/50 pt-1.5">
+                  <span className="text-muted-foreground">Previously Submitted At:</span>
+                  <span className="font-medium">{formatTime(submittedAt)}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground block">Optional Overall Note for Today</label>
+              <Textarea
+                placeholder="Add any additional notes about your day..."
+                value={overallNoteInput}
+                onChange={(e) => setOverallNoteInput(e.target.value)}
+                className="text-xs min-h-[70px] resize-none"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsSubmitModalOpen(false)}
+              className="text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmSubmitDay}
+              disabled={isSubmittingDay}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium gap-1.5"
+            >
+              <Send className="h-3.5 w-3.5" />
+              <span>{isSubmittingDay ? 'Submitting...' : 'Confirm Submission'}</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
