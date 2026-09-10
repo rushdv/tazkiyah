@@ -4,8 +4,9 @@ import { habitRepository } from '../repositories/habit.repository';
 import { streakRepository } from '../repositories/streak.repository';
 import { reflectionRepository } from '../repositories/reflection.repository';
 import { userRepository } from '../repositories/user.repository';
+import { dailyRecordRepository } from '../repositories/dailyRecord.repository';
 import { AppError } from '../utils/response';
-import { ReportGenerateInput } from '@tazkiyah/shared';
+import { ReportGenerateInput, getDateInfo, formatDateStr } from '@tazkiyah/shared';
 
 export const reportService = {
   async generateReport(userId: string, input: ReportGenerateInput) {
@@ -18,12 +19,34 @@ export const reportService = {
     const habits = await habitRepository.findAll();
     const records = await recordRepository.findByUserAndDateRange(userId, start, end);
     const reflections = await reflectionRepository.findByUserAndDateRange(userId, start, end);
+    const dailyRecordsList = await dailyRecordRepository.findRangeByUser(userId, start, end);
     const streaks = await streakRepository.get(userId);
 
-    const daySet = new Set<string>();
+    const recordsByDateMap = new Map<string, Map<string, any>>();
+    records.forEach((r) => {
+      const dStr = formatDateStr(r.date);
+      if (!recordsByDateMap.has(dStr)) {
+        recordsByDateMap.set(dStr, new Map());
+      }
+      recordsByDateMap.get(dStr)!.set(r.habitId, r);
+    });
+
+    const reflectionsMap = new Map(
+      reflections.map((rf) => [formatDateStr(rf.date), rf])
+    );
+
+    const dailyRecordsMap = new Map(
+      dailyRecordsList.map((dr) => [formatDateStr(dr.date), dr])
+    );
+
+    // Calculate total days in range
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const totalDaysInRange = Math.max(1, Math.round((end.getTime() - start.getTime()) / msPerDay) + 1);
+
     let quranTotalMinutes = 0;
     let exerciseTotalMinutes = 0;
     let learningTotalMinutes = 0;
+    let submittedDaysCount = 0;
 
     const habitDataMap = new Map<
       string,
@@ -34,9 +57,11 @@ export const reportService = {
       habitDataMap.set(h.id, { completedDays: 0, totalDuration: 0, totalCount: 0 });
     });
 
+    const trackedDaySet = new Set<string>();
+
     records.forEach((r) => {
-      const dateStr = r.date.toISOString().split('T')[0];
-      daySet.add(dateStr);
+      const dateStr = formatDateStr(r.date);
+      trackedDaySet.add(dateStr);
 
       const hd = habitDataMap.get(r.habitId);
       if (hd) {
@@ -55,10 +80,73 @@ export const reportService = {
       }
     });
 
-    const totalDaysTracked = daySet.size;
+    dailyRecordsList.forEach((dr) => {
+      if (dr.isSubmitted) submittedDaysCount++;
+    });
 
-    // Calculate overall consistency percentage
-    const totalPossibleHabitLogs = habits.length * (totalDaysTracked || 1);
+    const dailyJournal: any[] = [];
+    const currDate = new Date(start);
+
+    while (currDate <= end) {
+      const dateStr = formatDateStr(currDate);
+      const dateInfo = getDateInfo(dateStr);
+      const dayHabitsMap = recordsByDateMap.get(dateStr) || new Map();
+      const reflection = reflectionsMap.get(dateStr) || null;
+      const dr = dailyRecordsMap.get(dateStr) || null;
+
+      let completedCount = 0;
+      let totalProgress = 0;
+
+      const practices = habits.map((h) => {
+        const rec = dayHabitsMap.get(h.id) || null;
+        const status = rec ? rec.status : 'pending';
+        if (status === 'completed') {
+          completedCount++;
+          totalProgress += 100;
+        } else if (status === 'in_progress' && rec?.durationMinutes && h.targetMinutes) {
+          totalProgress += Math.min(100, Math.round((rec.durationMinutes / h.targetMinutes) * 100));
+        }
+
+        return {
+          habitId: h.id,
+          slug: h.slug,
+          label: h.label,
+          type: h.type,
+          status,
+          durationMinutes: rec?.durationMinutes || null,
+          actualCount: rec?.actualCount || null,
+          notes: rec?.notes || null,
+        };
+      });
+
+      const dailyScore = dr?.completionPercentage ?? (habits.length > 0 ? Math.round(totalProgress / habits.length) : 0);
+
+      dailyJournal.push({
+        date: dateStr,
+        dayName: dateInfo.dayName,
+        gregorianDisplay: dateInfo.gregorianDisplay,
+        gregorianShort: dateInfo.gregorianShort,
+        hijriDisplay: dateInfo.hijriDisplay,
+        isSubmitted: dr?.isSubmitted ?? false,
+        submittedAt: dr?.submittedAt ? dr.submittedAt.toISOString() : null,
+        dailyScore,
+        completedCount,
+        totalHabitsCount: habits.length,
+        practices,
+        reflection: reflection
+          ? {
+              mood: reflection.mood,
+              notes: reflection.notes,
+              improvement: reflection.improvement,
+            }
+          : null,
+      });
+
+      currDate.setDate(currDate.getDate() + 1);
+    }
+
+    const totalDaysTracked = trackedDaySet.size;
+    const totalPossibleHabitLogs = habits.length * totalDaysInRange;
     const totalCompletedLogs = records.filter((r) => r.status === 'completed').length;
     const overallConsistency = totalPossibleHabitLogs > 0
       ? Math.round((totalCompletedLogs / totalPossibleHabitLogs) * 100)
@@ -74,22 +162,30 @@ export const reportService = {
         completedDays: hd.completedDays,
         totalDurationMinutes: hd.totalDuration,
         totalCount: hd.totalCount,
-        completionRate: totalDaysTracked > 0 ? Math.round((hd.completedDays / totalDaysTracked) * 100) : 0,
+        completionRate: totalDaysInRange > 0 ? Math.round((hd.completedDays / totalDaysInRange) * 100) : 0,
       };
     });
 
-    // Find most consistent habit
     const mostConsistentHabit = habitBreakdown.length > 0
       ? habitBreakdown.reduce((best, curr) => (curr.completionRate > best.completionRate ? curr : best))
       : null;
 
+    const startInfo = getDateInfo(input.startDate);
+    const endInfo = getDateInfo(input.endDate);
+
     const summaryPayload = {
       userName: user.name,
+      userEmail: user.email,
       periodTitle: input.title,
+      periodType: input.periodType,
       startDate: input.startDate,
       endDate: input.endDate,
+      gregorianRange: `${startInfo.gregorianShort} – ${endInfo.gregorianShort}`,
+      hijriRange: `${startInfo.hijriDisplay} – ${endInfo.hijriDisplay}`,
       overallConsistency,
+      submittedDays: submittedDaysCount,
       trackedDays: totalDaysTracked,
+      totalDaysInRange,
       currentStreak: streaks?.currentStreak || 0,
       longestStreak: streaks?.longestStreak || 0,
       quranTotalMinutes,
@@ -98,12 +194,7 @@ export const reportService = {
       mostConsistentHabit,
       habitBreakdown,
       reflectionCount: reflections.length,
-      recentReflections: reflections.slice(0, 5).map((rf) => ({
-        date: rf.date.toISOString().split('T')[0],
-        mood: rf.mood,
-        notes: rf.notes,
-        improvement: rf.improvement,
-      })),
+      dailyJournal,
     };
 
     return reportRepository.create({
