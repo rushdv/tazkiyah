@@ -81,4 +81,15 @@ export const recordController = {
       next(error);
     }
   },
+
+  async submitDay(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { date, overallNote } = req.body;
+      const dateStr = date || new Date().toISOString().split('T')[0];
+      const data = await recordService.submitDay(req.userId!, dateStr, overallNote);
+      sendSuccess(res, { data, message: 'Daily record submitted successfully' });
+    } catch (error) {
+      next(error);
+    }
+  },
 };

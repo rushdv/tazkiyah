@@ -13,6 +13,7 @@ router.get('/history', validate(paginationSchema, 'query'), recordController.get
 router.get('/weekly-report', recordController.getWeeklyReport);
 router.get('/analytics/:year/:month', recordController.getMonthlyAnalytics);
 router.get('/day/:date', recordController.getDayDetail);
+router.post('/submit-day', recordController.submitDay);
 router.post('/', validate(habitRecordCreateSchema), recordController.upsert);
 router.patch('/:id', validate(habitRecordUpdateSchema), recordController.update);
 
