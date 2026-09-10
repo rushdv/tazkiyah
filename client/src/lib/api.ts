@@ -82,9 +82,9 @@ api.interceptors.response.use(
       }
     }
 
-    const message = (error.response?.data as { message?: string })?.message || 'An error occurred';
+    const message = (error.response?.data as { message?: string })?.message || (error.response ? 'An error occurred' : 'Server connecting... Please try again.');
     if (error.response?.status !== 401) {
-      toast.error(message);
+      toast.error(message, { id: 'api-error-toast' });
     }
 
     return Promise.reject(error);
