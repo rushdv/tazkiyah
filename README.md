@@ -226,13 +226,15 @@ Full API documentation is available at `/api-docs` when the server is running.
 ### Schema Overview
 
 - **User** - User accounts with authentication
-- **Habit** - Predefined habits (morning_azkar, evening_azkar, dua, quran, exercise, islamic_learning)
-- **HabitRecord** - Daily habit completion records
-- **Streak** - User streak tracking
-- **Achievement** - Achievement definitions
-- **UserAchievement** - User achievement progress
-- **Reminder** - User reminder settings
-- **Setting** - User preferences
+- **Habit** - Predefined practices (morning_azkar, evening_azkar, dua, quran, exercise, islamic_learning)
+- **HabitRecord** - Daily habit completion logs (status, duration, count, notes)
+- **DailyRecord** - Daily self-accountability submission state (`date`, `isSubmitted`, `submittedAt`, `completionPercentage`, `overallNote`)
+- **Report** - Structured report snapshots storing aggregate metrics and full daily journal JSON snapshots
+- **Streak** - User current and longest streak tracking
+- **Achievement** - Achievement definitions & unlocks
+- **UserAchievement** - User achievement progress tracking
+- **Reminder** - User reminder configurations
+- **Setting** - User preferences & week start configuration
 
 ### Commands
 
