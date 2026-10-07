@@ -49,6 +49,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 import { DEFAULT_HABITS } from './config/habits';
 import { prisma } from './config/database';
+import { execSync } from 'child_process';
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -64,8 +65,39 @@ app.get('/diag', async (_req, res) => {
   }
 });
 
+app.get('/api/v1/init-db', async (_req, res) => {
+  try {
+    execSync('npx prisma db push --accept-data-loss', {
+      stdio: 'inherit',
+      env: process.env,
+    });
+    await ensureDefaultData();
+    res.json({ success: true, message: 'Database pushed and seeded successfully!' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message });
+  }
+});
+
 app.use(notFoundHandler);
 app.use(errorHandler);
+
+async function ensureDatabaseSchema() {
+  try {
+    await prisma.user.count();
+    console.log('[Init] Database tables exist.');
+  } catch (err: any) {
+    console.log('[Init] Tables missing in database. Running prisma db push...');
+    try {
+      execSync('npx prisma db push --accept-data-loss', {
+        stdio: 'inherit',
+        env: process.env,
+      });
+      console.log('[Init] Database schema created successfully!');
+    } catch (pushErr) {
+      console.error('[Init] Failed to push database schema:', pushErr);
+    }
+  }
+}
 
 async function ensureDefaultData() {
   try {
@@ -138,6 +170,7 @@ async function ensureDefaultData() {
 
 async function start() {
   await connectDatabase();
+  await ensureDatabaseSchema();
   await ensureDefaultData();
   startCronJobs();
   
