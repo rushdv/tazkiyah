@@ -54,6 +54,16 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.get('/diag', async (_req, res) => {
+  try {
+    const userCount = await prisma.user.count();
+    const habitCount = await prisma.habit.count();
+    res.json({ status: 'ok', userCount, habitCount });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', message: err?.message, code: err?.code });
+  }
+});
+
 app.use(notFoundHandler);
 app.use(errorHandler);
 

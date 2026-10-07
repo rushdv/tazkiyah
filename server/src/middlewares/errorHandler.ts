@@ -18,8 +18,8 @@ export function errorHandler(
   sendError(
     res,
     500,
-    'An unexpected error occurred. Please try again later.',
-    process.env.NODE_ENV === 'development' ? err.message : undefined,
+    err.message || 'An unexpected error occurred. Please try again later.',
+    err.message,
   );
 }
 
