@@ -100,6 +100,27 @@ async function ensureDefaultData() {
       }
       console.log('[Init] Default habits and achievements ready!');
     }
+
+    const demoUser = await prisma.user.findUnique({ where: { email: 'testuser@example.com' } });
+    if (!demoUser) {
+      console.log('[Init] Creating demo user (testuser@example.com)...');
+      const bcrypt = (await import('bcryptjs')).default;
+      const passwordHash = await bcrypt.hash('Password123!', 12);
+      const user = await prisma.user.create({
+        data: {
+          email: 'testuser@example.com',
+          name: 'Demo User',
+          passwordHash,
+        },
+      });
+      await prisma.streak.create({
+        data: { userId: user.id, currentStreak: 3, longestStreak: 7, lastActivityDate: new Date() },
+      });
+      await prisma.setting.create({
+        data: { userId: user.id },
+      });
+      console.log('[Init] Demo user created successfully!');
+    }
   } catch (err) {
     console.error('[Init] Error checking default data:', err);
   }
