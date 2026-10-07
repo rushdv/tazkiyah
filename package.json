@@ -27,7 +27,7 @@
     "docker:dev": "docker-compose -f docker/docker-compose.dev.yml up",
     "docker:prod": "docker-compose -f docker/docker-compose.prod.yml up",
     "setup": "npm install && cd shared && npm install && cd ../server && npm install && cd ../client && npm install",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
