@@ -47,6 +47,9 @@ app.use('/api/v1', routes);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+import { DEFAULT_HABITS } from './config/habits';
+import { prisma } from './config/database';
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -54,8 +57,57 @@ app.get('/health', (_req, res) => {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+async function ensureDefaultData() {
+  try {
+    const habitCount = await prisma.habit.count();
+    if (habitCount === 0) {
+      console.log('[Init] Seeding default habits...');
+      for (const h of DEFAULT_HABITS) {
+        await prisma.habit.upsert({
+          where: { slug: h.slug },
+          update: {
+            label: h.label,
+            icon: h.icon,
+            description: h.description,
+            targetMinutes: h.targetMinutes,
+            sortOrder: h.sortOrder,
+          },
+          create: {
+            slug: h.slug,
+            label: h.label,
+            icon: h.icon,
+            description: h.description,
+            targetMinutes: h.targetMinutes,
+            sortOrder: h.sortOrder,
+          },
+        });
+      }
+
+      const achievements = [
+        { slug: '7_day_streak', title: '7-Day Streak', description: 'Complete all habits for 7 consecutive days', icon: 'badge', targetValue: 7 },
+        { slug: '30_day_streak', title: '30-Day Streak', description: 'Complete all habits for 30 consecutive days', icon: 'badge', targetValue: 30 },
+        { slug: '100_day_streak', title: '100-Day Streak', description: 'Complete all habits for 100 consecutive days', icon: 'badge', targetValue: 100 },
+        { slug: 'perfect_week', title: 'Perfect Week', description: 'Complete all habits for an entire week', icon: 'star', targetValue: 7 },
+        { slug: 'perfect_month', title: 'Perfect Month', description: 'Complete all habits for an entire month', icon: 'trophy', targetValue: 30 },
+      ];
+
+      for (const a of achievements) {
+        await prisma.achievement.upsert({
+          where: { slug: a.slug },
+          update: a,
+          create: a,
+        });
+      }
+      console.log('[Init] Default habits and achievements ready!');
+    }
+  } catch (err) {
+    console.error('[Init] Error checking default data:', err);
+  }
+}
+
 async function start() {
   await connectDatabase();
+  await ensureDefaultData();
   startCronJobs();
   
   app.listen(config.port, () => {
