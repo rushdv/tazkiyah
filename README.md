@@ -15,7 +15,7 @@ Tazkiyah is a modern Islamic habit tracker that helps Muslims consistently maint
 - ✅ **Dua** completion tracking
 - ✅ **Quran** reading (30 min goal)
 - ✅ **Exercise** (25 min goal)
-- ✅ **Islamic Learning** (30 min goal)
+- ✅ **Islamic Learning** (30 min goal) 
 - ✅ **Daily Dashboard** with progress rings and inspiration
 - ✅ **Monthly Calendar** with day-by-day completion
 - ✅ **Monthly Analytics** with charts and trends
