@@ -6,7 +6,7 @@ Tazkiyah is a modern Islamic habit tracker that helps Muslims consistently maint
 
 ---
 
-## Features  
+## Features   
 
 - ✅ **Um al-Qura Hijri Calendar** native integration & display
 - ✅ **Daily Submission Workflow** ("Progress Saved" vs "Day Submitted")
