@@ -35,7 +35,7 @@ Tazkiyah treats daily self-accountability (*Muhasabah*) with explicit distinctio
 - **Day Submitted**: At the end of the day, users click **"Submit Day"** with an optional Muhasabah reflection note. Once submitted, `isSubmitted: true` and `submittedAt` timestamp are recorded for immutable historical tracking.
 
 ### 2. Um al-Qura Hijri Date Integration
-- Native calculation using `Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', ...)` without external heavy dependencies.
+- Native calculation using   `Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', ...)` without external heavy dependencies.
 ### 3. Multi-page Structured PDF Progress Reports
 - **Page 1 (Cover Page)**: Overall consistency score, submitted days count, streak metrics, and total spiritual/learning hours.
 - **Page 2 (Practice Breakdown)**: Completion table by practice type, total duration/count, and highest consistency habit.
